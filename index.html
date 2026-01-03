@@ -1,986 +1,1177 @@
 <!doctype html>
-<html lang="zh-Hans">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>信息工厂 · 原型（工程模拟）</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>信息工厂 · 30分钟闭环原型</title>
   <style>
     :root{
-      --bg:#0b0f14; --panel:#111826; --panel2:#0f1622; --stroke:#263244; --text:#d7e0ee;
-      --muted:#7f93ad; --good:#45d483; --warn:#ffcc66; --bad:#ff5c5c; --accent:#6aa8ff;
-      --node:#121b28; --node2:#0e1520;
+      --bg:#0b0c0f;
+      --panel:#121420;
+      --panel2:#0f111a;
+      --text:#e9ecf1;
+      --muted:#a7afc0;
+      --line:#2a3042;
+      --good:#7CFC9A;
+      --warn:#ffd27d;
+      --bad:#ff7d7d;
+      --accent:#8fb7ff;
+      --accent2:#d1a7ff;
+      --shadow: 0 8px 30px rgba(0,0,0,.35);
+      --radius:16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
     }
-    *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
-    body{margin:0;background:var(--bg);color:var(--text);font:14px/1.25 system-ui,-apple-system,Segoe UI,Roboto,"PingFang SC","Hiragino Sans GB","Noto Sans CJK SC",sans-serif;}
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      background: radial-gradient(1200px 700px at 20% 0%, rgba(143,183,255,.18), transparent 60%),
+                  radial-gradient(900px 600px at 90% 20%, rgba(209,167,255,.12), transparent 60%),
+                  var(--bg);
+      color:var(--text);
+    }
     header{
-      position:fixed; left:0; right:0; top:0; z-index:5;
-      background:linear-gradient(to bottom, rgba(11,15,20,.98), rgba(11,15,20,.75));
-      padding:10px 12px 8px;
-      border-bottom:1px solid rgba(38,50,68,.55);
-      backdrop-filter: blur(10px);
+      position:sticky; top:0; z-index:30;
+      background: rgba(11,12,15,.75);
+      backdrop-filter: blur(12px);
+      border-bottom:1px solid rgba(42,48,66,.7);
     }
-    header .row{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;}
-    .brand{font-weight:700; letter-spacing:.2px;}
-    .pill{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid rgba(38,50,68,.8); border-radius:999px; background:rgba(17,24,38,.65);}
-    .btn{
-      border:1px solid rgba(38,50,68,.9); background:rgba(17,24,38,.85);
-      color:var(--text); padding:8px 10px; border-radius:10px;
-      display:inline-flex; gap:8px; align-items:center;
-      font-weight:600;
+    .wrap{max-width:1100px;margin:0 auto;padding:12px 14px;}
+    .topbar{
+      display:flex; gap:10px; align-items:center; justify-content:space-between;
     }
-    .btn:active{transform:translateY(1px);}
-    .btn.primary{border-color:rgba(106,168,255,.9); background:rgba(106,168,255,.14);}
-    .btn.danger{border-color:rgba(255,92,92,.8); background:rgba(255,92,92,.12);}
-    .btn.small{padding:6px 8px; border-radius:9px; font-weight:600;}
-    .btn[disabled]{opacity:.45;}
-    main{padding-top:82px; display:grid; grid-template-columns: 1fr; gap:10px;}
-    @media (min-width: 900px){
-      main{grid-template-columns: 1.25fr .75fr; padding-top:70px;}
-      header{padding:10px 16px 8px;}
+    .title{
+      display:flex; flex-direction:column; line-height:1.05;
     }
-    .canvasWrap{
-      position:relative; margin:0 10px 10px; border:1px solid rgba(38,50,68,.75);
-      background:radial-gradient(1200px 700px at 20% 10%, rgba(106,168,255,.12), transparent 55%),
-                 radial-gradient(900px 600px at 90% 60%, rgba(69,212,131,.10), transparent 55%),
-                 linear-gradient(180deg, rgba(17,24,38,.35), rgba(17,24,38,.10));
-      border-radius:14px; overflow:hidden;
-      min-height: 62vh;
+    .title b{font-size:15px; letter-spacing:.2px}
+    .title small{color:var(--muted); font-family:var(--mono); font-size:11px; margin-top:2px}
+    .btnrow{display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:flex-end}
+    button{
+      appearance:none;border:1px solid var(--line); background:linear-gradient(180deg,#1a2033,#12172a);
+      color:var(--text); padding:9px 10px; border-radius:12px; font-size:13px;
+      box-shadow: 0 1px 0 rgba(255,255,255,.06) inset;
     }
-    canvas{width:100%; height:100%; display:block;}
-    .hud{
-      position:absolute; left:10px; right:10px; top:10px; z-index:3;
-      display:flex; gap:10px; justify-content:space-between; flex-wrap:wrap; pointer-events:none;
+    button:active{transform: translateY(1px)}
+    button.primary{border-color:rgba(143,183,255,.6); background:linear-gradient(180deg,rgba(143,183,255,.23),rgba(143,183,255,.08));}
+    button.ghost{background:transparent}
+    button.danger{border-color:rgba(255,125,125,.55); background:linear-gradient(180deg,rgba(255,125,125,.18),rgba(255,125,125,.06));}
+    button:disabled{opacity:.45}
+    .grid{
+      display:grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap:12px;
+      padding:12px 14px 20px;
+      max-width:1100px;
+      margin:0 auto;
     }
-    .hud .card{
-      pointer-events:auto;
-      background:rgba(15,22,34,.75); border:1px solid rgba(38,50,68,.75);
-      border-radius:12px; padding:10px; min-width: 250px;
-      backdrop-filter: blur(10px);
+    @media (max-width: 860px){
+      .grid{grid-template-columns: 1fr; }
+      .btnrow{justify-content:flex-start}
     }
-    .kpiGrid{display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:8px; margin-top:8px;}
-    .kpi{padding:8px; border-radius:10px; background:rgba(17,24,38,.7); border:1px solid rgba(38,50,68,.65);}
-    .kpi .v{font-size:15px; font-weight:800;}
-    .kpi .t{font-size:12px; color:var(--muted); margin-top:2px;}
-    .side{
-      margin:0 10px 10px; border:1px solid rgba(38,50,68,.75);
-      background:rgba(17,24,38,.25);
-      border-radius:14px; overflow:hidden;
+    .card{
+      background: linear-gradient(180deg, rgba(18,20,32,.94), rgba(12,13,20,.92));
+      border:1px solid rgba(42,48,66,.85);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
     }
-    .side .section{padding:12px 12px 10px; border-bottom:1px solid rgba(38,50,68,.55);}
-    .side h3{margin:0 0 8px; font-size:13px; color:var(--muted); font-weight:700;}
-    .row2{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
-    .chip{
-      border:1px solid rgba(38,50,68,.75); background:rgba(17,24,38,.55);
-      color:var(--text); padding:7px 10px; border-radius:999px; font-weight:700;
+    .card h3{
+      margin:0;
+      padding:12px 14px;
+      border-bottom:1px solid rgba(42,48,66,.65);
+      font-size:14px;
+      letter-spacing:.2px;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
     }
-    .chip small{color:var(--muted); font-weight:700;}
-    .help{color:var(--muted); font-size:12px; line-height:1.35;}
-    .list{max-height: 30vh; overflow:auto; padding-right:4px;}
-    .logItem{padding:9px 10px; border:1px solid rgba(38,50,68,.55); border-radius:10px; background:rgba(15,22,34,.35); margin:8px 0;}
-    .logItem b{display:block; margin-bottom:4px;}
-    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
-    .tag{display:inline-flex; align-items:center; gap:6px; padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid rgba(38,50,68,.6); color:var(--muted);}
-    .tag.good{border-color:rgba(69,212,131,.55); color:rgba(69,212,131,.95);}
-    .tag.bad{border-color:rgba(255,92,92,.55); color:rgba(255,92,92,.95);}
-    .tag.warn{border-color:rgba(255,204,102,.55); color:rgba(255,204,102,.95);}
-    .footerNote{padding:10px 12px; color:var(--muted); font-size:12px;}
-    .toast{
-      position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
-      background:rgba(15,22,34,.95); border:1px solid rgba(38,50,68,.85); border-radius:12px;
-      padding:10px 12px; z-index:20; color:var(--text); max-width:min(540px, 92vw);
-      box-shadow: 0 10px 40px rgba(0,0,0,.45);
+    .card h3 span{color:var(--muted); font-weight:500; font-family:var(--mono); font-size:12px}
+    .card .body{padding:12px 14px;}
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 10px; border:1px solid rgba(42,48,66,.9);
+      border-radius:999px; background: rgba(15,17,26,.8);
+      font-family:var(--mono); font-size:12px; color:var(--muted);
+      white-space:nowrap;
+    }
+    .pill b{color:var(--text); font-weight:700}
+    .kpis{display:flex; flex-wrap:wrap; gap:8px}
+    .kpi{
+      flex: 1 1 140px;
+      padding:10px 12px; border-radius:14px;
+      border:1px solid rgba(42,48,66,.9);
+      background: rgba(15,17,26,.75);
+      min-width: 140px;
+    }
+    .kpi .lab{color:var(--muted); font-size:11px; font-family:var(--mono)}
+    .kpi .val{font-size:18px; margin-top:3px; font-family:var(--mono)}
+    .kpi .hint{color:var(--muted); font-size:11px; margin-top:2px}
+    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    .row > *{flex:1}
+    .split{
+      display:grid; grid-template-columns: 1fr 1fr; gap:10px;
+    }
+    @media (max-width: 520px){
+      .split{grid-template-columns:1fr}
+    }
+    .list{
+      border:1px solid rgba(42,48,66,.85);
+      border-radius:14px;
+      background: rgba(15,17,26,.65);
+      overflow:hidden;
+    }
+    .list .head{
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+      padding:10px 12px; border-bottom:1px solid rgba(42,48,66,.65);
+      font-family:var(--mono); font-size:12px; color:var(--muted);
+    }
+    .items{max-height: 330px; overflow:auto;}
+    .item{
+      display:grid;
+      grid-template-columns: 64px 1fr auto;
+      gap:10px;
+      padding:10px 12px;
+      border-bottom:1px solid rgba(42,48,66,.42);
+      align-items:center;
+    }
+    .item:last-child{border-bottom:none}
+    .tag{
+      font-family:var(--mono);
+      font-weight:800;
+      font-size:12px;
+      padding:6px 8px;
+      border-radius:12px;
+      text-align:center;
+      border:1px solid rgba(42,48,66,.8);
+      background: rgba(11,12,15,.55);
+    }
+    .tag.A{color:#b6e3ff; border-color:rgba(143,183,255,.55)}
+    .tag.B{color:#d1a7ff; border-color:rgba(209,167,255,.55)}
+    .tag.C{color:#7cfc9a; border-color:rgba(124,252,154,.55)}
+    .tag.D{color:#ffd27d; border-color:rgba(255,210,125,.55)}
+    .meta{
+      font-size:12px;
+      color:var(--muted);
+      display:flex; gap:8px; flex-wrap:wrap;
+      font-family:var(--mono);
+    }
+    .meta b{color:var(--text); font-weight:700}
+    .actions{display:flex; gap:8px}
+    .actions button{padding:7px 9px; border-radius:10px; font-size:12px}
+    .small{font-size:12px; color:var(--muted); line-height:1.35}
+    .sep{height:1px; background:rgba(42,48,66,.6); margin:12px 0}
+    .toolbox{
+      display:grid; gap:10px;
+    }
+    .tool{
+      border:1px solid rgba(42,48,66,.85);
+      border-radius:14px;
+      background: rgba(15,17,26,.65);
+      overflow:hidden;
+    }
+    .tool .t-head{
+      padding:10px 12px;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      border-bottom:1px solid rgba(42,48,66,.55);
+      font-family:var(--mono);
+      font-size:12px;
+      color:var(--muted);
+    }
+    .tool .t-body{padding:10px 12px;}
+    input[type="range"]{width:100%}
+    .range-row{display:grid; grid-template-columns: 48px 1fr 48px; gap:10px; align-items:center;}
+    .range-row label{font-family:var(--mono); font-size:12px; color:var(--muted)}
+    .range-row .num{font-family:var(--mono); font-size:12px; text-align:right; color:var(--text)}
+    .toggle{display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .toggle span{font-family:var(--mono); font-size:12px; color:var(--muted)}
+    .toggle input{transform: scale(1.1)}
+    .note{
+      padding:10px 12px;
+      border:1px dashed rgba(42,48,66,.9);
+      border-radius:14px;
+      background: rgba(11,12,15,.35);
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.45;
+    }
+    .banner{
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(42,48,66,.85);
+      background: linear-gradient(180deg, rgba(143,183,255,.14), rgba(15,17,26,.65));
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.45;
+    }
+    .banner b{color:var(--text)}
+    .modal-back{
+      position:fixed; inset:0;
+      background: rgba(0,0,0,.55);
       display:none;
+      align-items:center; justify-content:center;
+      padding:16px;
+      z-index:50;
+    }
+    .modal{
+      width:min(760px, 96vw);
+      background: linear-gradient(180deg, rgba(18,20,32,.98), rgba(10,11,18,.98));
+      border:1px solid rgba(42,48,66,.95);
+      border-radius:18px;
+      box-shadow: 0 16px 60px rgba(0,0,0,.55);
+      overflow:hidden;
+    }
+    .modal header{
+      position:unset;
+      background:transparent;
+      border-bottom:1px solid rgba(42,48,66,.65);
+    }
+    .modal .wrap{padding:12px 14px}
+    .modal .content{padding:12px 14px}
+    .modal .content h4{margin:0 0 8px 0}
+    .modal .content pre{
+      margin:0;
+      padding:10px 12px;
+      background: rgba(15,17,26,.75);
+      border:1px solid rgba(42,48,66,.85);
+      border-radius:14px;
+      overflow:auto;
+      color:#d7dbff;
+      font-size:12px;
+      font-family:var(--mono);
+      max-height: 40vh;
+    }
+    .badge{
+      display:inline-flex; align-items:center; gap:6px;
+      font-family:var(--mono);
+      font-size:11px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid rgba(42,48,66,.85);
+      background: rgba(15,17,26,.65);
+      color:var(--muted);
+    }
+    .badge.good{border-color:rgba(124,252,154,.45); color:#bfffd0}
+    .badge.warn{border-color:rgba(255,210,125,.45); color:#ffe3b3}
+    .badge.bad{border-color:rgba(255,125,125,.45); color:#ffb3b3}
+    .footer{
+      text-align:center;
+      color:rgba(167,175,192,.75);
+      font-size:11px;
+      padding:16px 0 24px;
+      font-family:var(--mono);
     }
   </style>
 </head>
 <body>
 <header>
-  <div class="row">
-    <div class="brand">信息工厂 · 原型 <span class="tag">工程模拟</span></div>
-    <div class="row2">
-      <button class="btn primary" id="btnPlay">▶︎ 运行</button>
-      <button class="btn" id="btnStep">⏭︎ 单步</button>
-      <button class="btn" id="btnReset">↺ 重置</button>
-      <button class="btn" id="btnSave">💾 保存</button>
-      <button class="btn" id="btnLoad">⤓ 读取</button>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="title">
+        <b>信息工厂 · 30分钟闭环原型</b>
+        <small id="subTitle">探索 → 建线 → 稳定 → 放手（压缩时间：30分钟≈30回合）</small>
+      </div>
+      <div class="btnrow">
+        <button class="primary" id="btnRun">运行</button>
+        <button id="btnStep">单步</button>
+        <button class="ghost" id="btnPause" disabled>暂停</button>
+        <button id="btnExport">导出蓝图</button>
+        <button id="btnImport">导入蓝图</button>
+        <button class="danger" id="btnReset">重开</button>
+      </div>
     </div>
   </div>
 </header>
 
-<main>
-  <div class="canvasWrap" id="wrap">
-    <canvas id="c"></canvas>
-
-    <div class="hud">
-      <div class="card">
-        <div class="row2">
-          <span class="pill"><span class="mono">Mode</span>: <b id="modeTxt">编辑</b></span>
-          <span class="pill"><span class="mono">Item</span>: <b id="itemTxt">0</b></span>
-          <span class="pill"><span class="mono">Δt</span>: <b id="dtTxt">0.25s</b></span>
+<div class="grid">
+  <section class="card">
+    <h3>日内状态 <span id="phaseLabel"></span></h3>
+    <div class="body">
+      <div class="kpis">
+        <div class="kpi">
+          <div class="lab">回合 / 总回合</div>
+          <div class="val" id="kpiTurn">0 / 30</div>
+          <div class="hint">每回合≈1分钟</div>
         </div>
-        <div class="kpiGrid">
-          <div class="kpi"><div class="v" id="kThrough">0/m</div><div class="t">吞吐 (输出)</div></div>
-          <div class="kpi"><div class="v" id="kNoise">0%</div><div class="t">噪音 (丢弃)</div></div>
-          <div class="kpi"><div class="v" id="kDup">0%</div><div class="t">重复浪费</div></div>
-          <div class="kpi"><div class="v" id="kLat">0.0m</div><div class="t">延迟</div></div>
-          <div class="kpi"><div class="v" id="kCov">0%</div><div class="t">覆盖 (高价值)</div></div>
-          <div class="kpi"><div class="v" id="kErr">0%</div><div class="t">抓取错误</div></div>
+        <div class="kpi">
+          <div class="lab">注意力</div>
+          <div class="val" id="kpiAttention">100</div>
+          <div class="hint">读/暂存/介入都会消耗</div>
         </div>
-        <div class="help" style="margin-top:8px">
-          操作：<b>拖拽节点</b>移动；<b>点节点再点另一个节点</b>连线；<b>点线</b>删除；右侧可添加模块。<br/>
-          目标：搭出 <span class="mono">Source → Filter → Dedup → Digest</span> 管线，让 KPI 变好。
+        <div class="kpi">
+          <div class="lab">信任度</div>
+          <div class="val" id="kpiTrust">50</div>
+          <div class="hint">介入越多越低</div>
+        </div>
+        <div class="kpi">
+          <div class="lab">稳定度</div>
+          <div class="val" id="kpiStability">0</div>
+          <div class="hint">输出越稳定越高</div>
+        </div>
+        <div class="kpi">
+          <div class="lab">价值捕获（延迟结算）</div>
+          <div class="val" id="kpiValue">0</div>
+          <div class="hint">不是立刻知道“有用”</div>
+        </div>
+        <div class="kpi">
+          <div class="lab">噪音浪费</div>
+          <div class="val" id="kpiWaste">0</div>
+          <div class="hint">读了但没推进</div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <aside class="side">
-    <div class="section">
-      <h3>添加模块（点一下添加到画布）</h3>
-      <div class="row2">
-        <button class="btn small" data-add="source">⛏️ Source</button>
-        <button class="btn small" data-add="fetch">🚚 Fetch</button>
-        <button class="btn small" data-add="split">🔀 Split</button>
-        <button class="btn small" data-add="filter">🚧 Filter</button>
-        <button class="btn small" data-add="dedup">🧺 Dedup</button>
-        <button class="btn small" data-add="digest">🗞️ Digest</button>
-        <button class="btn small" data-add="output">📦 Output</button>
+      <div class="sep"></div>
+
+      <div class="banner" id="tutorialBox"></div>
+
+      <div class="sep"></div>
+
+      <div class="split">
+        <div class="list">
+          <div class="head">
+            <span>收件箱（本回合新到达）</span>
+            <span class="badge" id="inboxBadge">0</span>
+          </div>
+          <div class="items" id="inbox"></div>
+        </div>
+        <div class="list">
+          <div class="head">
+            <span>仓库（你选择保留）</span>
+            <span class="badge" id="stashBadge">0</span>
+          </div>
+          <div class="items" id="stash"></div>
+        </div>
       </div>
-      <div class="help" style="margin-top:8px">
-        提示：这只是“工程模拟原型”。每个模块都是一个可调参数的黑盒，流动的是信息 Item（带噪音/重复/价值等属性）。
+
+      <div class="sep"></div>
+
+      <div class="list">
+        <div class="head">
+          <span>日报输出（经过你的信息流）</span>
+          <span class="badge" id="digestBadge">0</span>
+        </div>
+        <div class="items" id="digest"></div>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="small">
+        小技巧：你不需要读很多信息。你的“胜利”来自：用更少的注意力，获得更稳定的推进。
       </div>
     </div>
+  </section>
 
-    <div class="section">
-      <h3>选中节点参数</h3>
-      <div id="inspector" class="help">点一个节点查看参数并调整。</div>
-    </div>
+  <aside class="card">
+    <h3>信息流工具箱 <span id="toolLockHint">（会随阶段解锁）</span></h3>
+    <div class="body">
+      <div class="toolbox">
+        <div class="tool">
+          <div class="t-head">
+            <span>潜在动机链</span>
+            <span class="badge" id="chainBadge">未显形</span>
+          </div>
+          <div class="t-body">
+            <div class="small" id="chainText"></div>
+            <div class="sep"></div>
+            <div class="row">
+              <div class="pill"><b id="prefType">?</b> <span>偏好信号</span></div>
+              <div class="pill"><b id="chainStage">—</b> <span>推进阶段</span></div>
+            </div>
+          </div>
+        </div>
 
-    <div class="section">
-      <h3>生产日志（最近 20 条）</h3>
-      <div class="list" id="log"></div>
-    </div>
+        <div class="tool" id="toolFilter">
+          <div class="t-head">
+            <span>粗筛器（权重）</span>
+            <span class="badge warn" id="filterBadge">锁定</span>
+          </div>
+          <div class="t-body">
+            <div class="small">把注意力集中在某些信号上会更快推进，但也会制造盲区。</div>
+            <div class="sep"></div>
 
-    <div class="footerNote">
-      原型说明：这是一个离线单文件网页（无需后端）。后续可以把真实 RSS（Miniflux/RSSHub）接进来，让游戏输入来自真实世界。
+            <div class="range-row"><label>A</label><input type="range" min="0" max="100" value="25" id="wA"><div class="num" id="wAVal">25</div></div>
+            <div class="range-row"><label>B</label><input type="range" min="0" max="100" value="25" id="wB"><div class="num" id="wBVal">25</div></div>
+            <div class="range-row"><label>C</label><input type="range" min="0" max="100" value="25" id="wC"><div class="num" id="wCVal">25</div></div>
+            <div class="range-row"><label>D</label><input type="range" min="0" max="100" value="25" id="wD"><div class="num" id="wDVal">25</div></div>
+
+            <div class="sep"></div>
+            <div class="toggle">
+              <span>去重（Dedup）</span>
+              <input type="checkbox" id="dedup" />
+            </div>
+            <div class="toggle">
+              <span>每日上限（Digest cap）</span>
+              <input type="range" min="4" max="14" value="10" id="cap" />
+            </div>
+            <div class="small">上限越低：更省注意力，但可能漏掉关键。</div>
+          </div>
+        </div>
+
+        <div class="tool" id="toolUpgrades">
+          <div class="t-head">
+            <span>升级</span>
+            <span class="badge warn" id="upgradeBadge">锁定</span>
+          </div>
+          <div class="t-body">
+            <div class="small">升级不是“更多信息”，而是“更少介入”。但升级也会引入黑箱与漂移风险。</div>
+            <div class="sep"></div>
+
+            <div class="range-row">
+              <label>精度</label>
+              <input type="range" min="40" max="95" value="55" id="acc" />
+              <div class="num" id="accVal">55%</div>
+            </div>
+            <div class="range-row">
+              <label>缓冲</label>
+              <input type="range" min="0" max="3" value="0" id="buf" />
+              <div class="num" id="bufVal">0</div>
+            </div>
+            <div class="toggle">
+              <span>异常检测</span>
+              <input type="checkbox" id="anom" />
+            </div>
+            <div class="sep"></div>
+            <button id="btnScan" class="ghost" disabled>手动介入扫描（-15 注意力）</button>
+            <div class="small">介入能短期补救，但会降低信任度，破坏“放手”的胜利条件。</div>
+          </div>
+        </div>
+
+        <div class="tool">
+          <div class="t-head">
+            <span>阶段目标</span>
+            <span class="badge" id="goalBadge">进行中</span>
+          </div>
+          <div class="t-body">
+            <div class="note" id="goalText">
+              0–5：探索信号，尽量少消耗注意力。<br/>
+              5–12：建一条粗筛信息流，使日报更“可读”。<br/>
+              12–20：通过升级让输出稳定，减少介入。<br/>
+              20–25：经历一次“缺席事件”，练习放手。<br/>
+              25–30：回顾与扩展：准备下一条动机链。
+            </div>
+          </div>
+        </div>
+
+        <div class="tool">
+          <div class="t-head">
+            <span>说明</span>
+            <span class="badge">本地保存</span>
+          </div>
+          <div class="t-body">
+            <div class="small">
+              这是一个可在 GitHub Pages 运行的纯前端原型（无后端）。<br/>
+              导出蓝图得到 JSON，可用于分享或对照不同策略。
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </aside>
-</main>
+</div>
 
-<div class="toast" id="toast"></div>
+<div class="footer">
+  Prototype v1 · 纯前端 · 适合 GitHub Pages · 关键词：注意力、信任、延迟价值、放手
+</div>
+
+<div class="modal-back" id="modalBack">
+  <div class="modal">
+    <header>
+      <div class="wrap" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+        <b id="modalTitle">蓝图</b>
+        <button id="btnCloseModal">关闭</button>
+      </div>
+    </header>
+    <div class="content">
+      <h4 id="modalH">导出内容（JSON）</h4>
+      <pre id="modalPre"></pre>
+      <div class="sep"></div>
+      <div class="row">
+        <button id="btnCopy" class="primary">复制</button>
+        <button id="btnPaste" class="ghost">从剪贴板粘贴并导入</button>
+      </div>
+      <div class="small" id="modalHint" style="margin-top:10px;color:var(--muted)"></div>
+    </div>
+  </div>
+</div>
 
 <script>
-(() => {
-  // ===== Helpers =====
-  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-  const lerp=(a,b,t)=>a+(b-a)*t;
-  const now=()=>performance.now();
-  const fmtPct=(x)=> (Math.round(x*1000)/10).toFixed(1) + "%";
-  const fmtMin=(x)=> (Math.round(x*10)/10).toFixed(1) + "m";
-  const randn=()=> { // Box-Muller
-    let u=0,v=0; while(u===0)u=Math.random(); while(v===0)v=Math.random();
-    return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const fmt = (n) => (Math.round(n*10)/10).toString();
+function mulberry32(seed){
+  let t = seed >>> 0;
+  return function(){
+    t += 0x6D2B79F5;
+    let r = Math.imul(t ^ t >>> 15, 1 | t);
+    r ^= r + Math.imul(r ^ r >>> 7, 61 | r);
+    return ((r ^ r >>> 14) >>> 0) / 4294967296;
   };
+}
+function nowIso(){ return new Date().toISOString(); }
+function el(id){ return document.getElementById(id); }
+function badgeClass(type){
+  if(type==="good") return "badge good";
+  if(type==="warn") return "badge warn";
+  if(type==="bad") return "badge bad";
+  return "badge";
+}
+function typeColorClass(t){ return "tag " + t; }
 
-  function toast(msg){
-    const t=document.getElementById("toast");
-    t.textContent=msg;
-    t.style.display="block";
-    clearTimeout(t._to);
-    t._to=setTimeout(()=>t.style.display="none", 1400);
-  }
+const DEFAULT_STATE = () => ({
+  seed: 20260103,
+  turn: 0,
+  totalTurns: 30,
+  running: false,
+  attention: 100,
+  trust: 50,
+  stability: 0,
+  valueCaptured: 0,
+  waste: 0,
+  unlocked: { filter:false, upgrades:false, manualScan:false },
+  stash: [],
+  history: [],
+  digest: [],
+  lastDigestCount: 0,
+  lastDigestTypes: "",
+  chain: { visible:false, prefType:null, stage:0, confidence:0, lastUpdateTurn:0 },
+  pipeline: {
+    weights:{A:25,B:25,C:25,D:25},
+    dedup:false,
+    cap:10,
+    accuracy:55,
+    buffer:0,
+    anomaly:false
+  },
+  bufferQ: [],
+  gap: { active:false, typeMissing:null, startedTurn:null, intervened:false }
+});
 
-  // ===== Canvas Setup (HiDPI) =====
-  const wrap = document.getElementById("wrap");
-  const canvas = document.getElementById("c");
-  const ctx = canvas.getContext("2d");
-  function resize(){
-    const r = wrap.getBoundingClientRect();
-    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
-    canvas.width = Math.floor(r.width * dpr);
-    canvas.height = Math.floor(r.height * dpr);
-    canvas.style.width = r.width + "px";
-    canvas.style.height = r.height + "px";
-    ctx.setTransform(dpr,0,0,dpr,0,0);
-  }
-  window.addEventListener("resize", resize);
-  resize();
-
-  // ===== Graph Model =====
-  const NodeType = {
-    source: {name:"Source", color:"#6aa8ff"},
-    fetch:  {name:"Fetch",  color:"#7f93ad"},
-    split:  {name:"Split",  color:"#ffcc66"},
-    filter: {name:"Filter", color:"#ffcc66"},
-    dedup:  {name:"Dedup",  color:"#45d483"},
-    digest: {name:"Digest", color:"#6aa8ff"},
-    output: {name:"Output", color:"#45d483"},
+function loadState(){
+  try{
+    const raw = localStorage.getItem("infoFactory30_state");
+    if(!raw) return null;
+    const obj = JSON.parse(raw);
+    if(obj.v !== 1) return null;
+    return Object.assign(DEFAULT_STATE(), obj);
+  }catch(e){ return null; }
+}
+function saveState(){
+  const obj = {
+    v:1,
+    seed:S.seed, turn:S.turn, totalTurns:S.totalTurns,
+    attention:S.attention, trust:S.trust, stability:S.stability,
+    valueCaptured:S.valueCaptured, waste:S.waste,
+    unlocked:S.unlocked,
+    stash:S.stash.slice(0,80),
+    history:S.history.slice(-220),
+    digest:S.digest.slice(0,220),
+    lastDigestCount:S.lastDigestCount,
+    lastDigestTypes:S.lastDigestTypes,
+    chain:S.chain,
+    pipeline:S.pipeline,
+    bufferQ:S.bufferQ.slice(0,220),
+    gap:S.gap
   };
+  localStorage.setItem("infoFactory30_state", JSON.stringify(obj));
+}
 
-  let nextId = 1;
-  function makeNode(type, x, y){
-    const t = NodeType[type];
-    const id = nextId++;
-    const base = {
-      id, type, x, y, w: 140, h: 64,
-      in: [], out: [],
-      stats: {in:0, out:0, drop:0, err:0},
-      queue: [],
-      selected: false,
-    };
-    // Default params per type
-    if(type==="source"){
-      base.params = { rate: 8, noise: 0.35, dup: 0.25, value: 0.55 }; // per minute-ish
-    }else if(type==="fetch"){
-      base.params = { throughput: 30, err: 0.04, latency: 0.15 };
-    }else if(type==="split"){
-      base.params = { rules: "unity|plugin=>A; manga|one piece=>B; philosophy=>C; bookstore=>D", branches: 2 };
-      base.branch = ["A","B"];
-    }else if(type==="filter"){
-      base.params = { strict: 0.55, keepValueMin: 0.45 }; // strict -> more drop
-    }else if(type==="dedup"){
-      base.params = { threshold: 0.85 }; // similarity threshold
-      base.seen = new Map();
-    }else if(type==="digest"){
-      base.params = { batch: 10, flushMin: 2.0 };
-      base.bucket = [];
-      base.lastFlush = 0;
-    }else if(type==="output"){
-      base.params = { maxPerMin: 20 };
-    }
-    return base;
-  }
+let S = loadState() || DEFAULT_STATE();
+const rng = mulberry32(S.seed);
+let currentInbox = [];
 
-  function makeEdge(a, b){
-    return { id: "e"+a.id+"_"+b.id+"_"+Math.random().toString(16).slice(2,6), a:a.id, b:b.id, selected:false };
-  }
+function phaseOfTurn(t){
+  if(t <= 4) return {name:"探索", idx:1, range:"0–5"};
+  if(t <= 11) return {name:"建线", idx:2, range:"5–12"};
+  if(t <= 19) return {name:"稳定", idx:3, range:"12–20"};
+  if(t <= 24) return {name:"放手", idx:4, range:"20–25"};
+  return {name:"回顾", idx:5, range:"25–30"};
+}
+function updateUnlocks(){
+  const p = phaseOfTurn(S.turn).idx;
+  S.unlocked.filter = (p >= 2);
+  S.unlocked.upgrades = (p >= 3);
+  S.unlocked.manualScan = (p >= 3);
+}
 
-  let nodes = [];
-  let edges = [];
-
-  // Seed default pipeline
-  function seed(){
-    nextId = 1;
-    nodes = [
-      makeNode("source", 80, 140),
-      makeNode("fetch",  280, 140),
-      makeNode("filter", 480, 140),
-      makeNode("dedup",  680, 140),
-      makeNode("digest", 880, 140),
-      makeNode("output", 1080,140),
-    ];
-    edges = [
-      makeEdge(nodes[0], nodes[1]),
-      makeEdge(nodes[1], nodes[2]),
-      makeEdge(nodes[2], nodes[3]),
-      makeEdge(nodes[3], nodes[4]),
-      makeEdge(nodes[4], nodes[5]),
-    ];
-    rebuildAdj();
-    logClear();
-    logAdd("系统已初始化：Source → Fetch → Filter → Dedup → Digest → Output");
-  }
-
-  function rebuildAdj(){
-    for(const n of nodes){ n.in=[]; n.out=[]; }
-    for(const e of edges){
-      const a = nodes.find(n=>n.id===e.a);
-      const b = nodes.find(n=>n.id===e.b);
-      if(!a || !b) continue;
-      a.out.push(b.id);
-      b.in.push(a.id);
+function genItem(turn){
+  const types = ["A","B","C","D"];
+  let biasType = S.chain.visible ? S.chain.prefType : null;
+  let missing = S.gap.active ? S.gap.typeMissing : null;
+  let t;
+  if(biasType && rng() < 0.38) t = biasType;
+  else t = types[Math.floor(rng()*types.length)];
+  if(missing && rng() < 0.7){
+    let tries = 0;
+    while(t === missing && tries++ < 5){
+      t = types[Math.floor(rng()*types.length)];
     }
   }
+  const id = turn + "-" + Math.floor(rng()*1e9).toString(16);
+  const noise = rng() < 0.45;
+  const novelty = rng();
+  const urgency = rng();
+  const strength = clamp(0.35 + 0.65*rng(), 0, 1);
+  const baseUse = (t === (S.chain.prefType || "Z")) ? (0.55 + 0.45*rng()) : (0.15 + 0.35*rng());
+  const potential = noise ? baseUse*0.35 : baseUse;
+  const window = (urgency < 0.2) ? 1 : (urgency < 0.6 ? 2 : 3);
+  return { id, type:t, turn, noise, novelty, urgency, strength, potential, window, read:false, stashed:false, ignored:false };
+}
+function genInboxForTurn(turn){
+  const p = phaseOfTurn(turn).idx;
+  let n = (p === 1) ? 8 : (p === 2) ? 7 : (p === 3) ? 6 : (p === 4) ? 5 : 4;
+  n += (rng() < 0.35 ? 1 : 0);
+  const arr = [];
+  for(let i=0;i<n;i++) arr.push(genItem(turn));
+  return arr;
+}
+function scoreItemForPipeline(item){
+  const w = S.pipeline.weights[item.type] ?? 25;
+  const wNorm = w / 100;
+  const acc = clamp(S.pipeline.accuracy, 40, 95) / 100;
+  const trueRel = clamp(item.potential, 0, 1);
+  let estimate;
+  if(rng() < acc) estimate = trueRel;
+  else estimate = 1 - trueRel * (0.6 + 0.4*rng());
+  return wNorm * (0.35 + 0.65*estimate) * item.strength;
+}
+function dedupKey(item){ return item.type + "|" + Math.floor(item.novelty*5); }
 
-  // ===== Items =====
-  function makeItem(){
-    // topic: 0 unity,1 indie,2 philosophy,3 manga,4 bookstore (we keep it simple)
-    const topics = ["unity","indie","philosophy","manga","bookstore"];
-    const topic = topics[Math.floor(Math.random()*topics.length)];
-    const value = clamp(0.15 + 0.7*Math.random() + 0.15*(topic==="unity" ? 0.2 : 0), 0, 1);
-    const noise = clamp(0.15 + 0.75*Math.random(), 0, 1);
-    const dupKey = (Math.random()<0.35) ? (topic+"_"+Math.floor(Math.random()*5)) : (topic+"_"+Math.floor(Math.random()*100000));
-    return {
-      id: "i"+Math.random().toString(16).slice(2),
-      topic,
-      value,
-      noise,
-      dupKey,
-      createdAt: simTimeMin,
-      hops: 0,
-    };
-  }
-
-  // ===== Simulation =====
-  let running = false;
-  let lastT = now();
-  let simTimeMin = 0;      // simulation time in minutes
-  let dtMin = 0.25/60;     // 0.25s -> minutes
-  const dtTxt = document.getElementById("dtTxt");
-  dtTxt.textContent = "0.25s";
-
-  // Rolling KPI window
-  const windowMin = 5; // 5 minutes
-  let kpiEvents = []; // {t, out, drop, dupIn, dupOut, err, highIn, highOut, lat}
-  function pushKpi(ev){
-    kpiEvents.push(ev);
-    const cutoff = simTimeMin - windowMin;
-    while(kpiEvents.length && kpiEvents[0].t < cutoff) kpiEvents.shift();
-  }
-
-  function topoOrder(){
-    // Kahn
-    const indeg = new Map(nodes.map(n=>[n.id, n.in.length]));
-    const q = nodes.filter(n=>indeg.get(n.id)===0).map(n=>n.id);
-    const out = [];
-    while(q.length){
-      const id = q.shift();
-      out.push(id);
-      const n = nodes.find(x=>x.id===id);
-      for(const to of n.out){
-        indeg.set(to, indeg.get(to)-1);
-        if(indeg.get(to)===0) q.push(to);
-      }
+function settleDelayedValue(){
+  const t = S.turn;
+  const pref = S.chain.prefType;
+  if(!pref) return;
+  for(const it of S.digest){
+    if(it._settled) continue;
+    if(t - it.turn > it.window) { it._settled = true; continue; }
+    if(t - it.turn >= 2 || t >= S.totalTurns-1){
+      const match = (it.type === pref);
+      const v = match ? (2 + Math.floor(3*it.potential)) : (0 + Math.floor(1*it.potential));
+      S.valueCaptured += v;
+      it._settled = true;
     }
-    // If cycle exists, fallback to nodes order
-    return out.length===nodes.length ? out : nodes.map(n=>n.id);
   }
+}
+function updateChainInference(){
+  const windowTurns = 8;
+  const recent = S.history.filter(x => S.turn - x.turn <= windowTurns);
+  let weight = {A:0,B:0,C:0,D:0};
+  for(const it of recent){
+    if(it.stashed) weight[it.type]+=2.2;
+    if(it.read) weight[it.type]+=1.0;
+    if(it.ignored) weight[it.type]+=0.2;
+  }
+  const total = weight.A+weight.B+weight.C+weight.D;
+  if(total < 1){
+    S.chain.confidence = clamp(S.chain.confidence - 3, 0, 100);
+    return;
+  }
+  const sorted = Object.entries(weight).sort((a,b)=>b[1]-a[1]);
+  const bestType = sorted[0][0];
+  const margin = sorted[0][1] - sorted[1][1];
+  const conf = clamp(20 + margin*18, 0, 100);
 
-  function step(){
-    const order = topoOrder();
-    // reset per-step stats
-    for(const n of nodes){ n.stats.in=0; n.stats.out=0; n.stats.drop=0; n.stats.err=0; }
-
-    let outCount=0, dropCount=0, errCount=0;
-    let dupIn=0, dupOut=0;
-    let highIn=0, highOut=0;
-    let latSum=0, latN=0;
-
-    // process nodes in topo order
-    for(const nid of order){
-      const n = nodes.find(x=>x.id===nid);
-      if(!n) continue;
-
-      // Source produces items
-      if(n.type==="source"){
-        const rate = n.params.rate; // per minute
-        const expected = rate * dtMin;
-        const k = clamp(expected + 0.8*randn()*Math.sqrt(Math.max(expected,0.0001)), 0, 999);
-        const count = Math.floor(k);
-        for(let i=0;i<count;i++){
-          const it = makeItem();
-          // apply source quality knobs
-          it.noise = clamp(it.noise + (n.params.noise-0.35)*0.8, 0, 1);
-          it.value = clamp(it.value + (n.params.value-0.55)*0.7, 0, 1);
-          if(Math.random() < n.params.dup) it.dupKey = it.topic + "_DUP_" + Math.floor(Math.random()*6);
-          n.queue.push(it);
-        }
-      }
-
-      // Pop some items depending on module throughput
-      let moved = [];
-      const q = n.queue;
-      const maxMove = (() => {
-        if(n.type==="fetch") return Math.floor(n.params.throughput * dtMin);
-        if(n.type==="output") return Math.floor(n.params.maxPerMin * dtMin);
-        return Math.min(q.length, 9999);
-      })();
-
-      // process items
-      for(let j=0;j<Math.min(q.length, maxMove); j++){
-        const it = q.shift();
-        it.hops++;
-        n.stats.in++;
-
-        if(it.value >= 0.75) highIn++;
-
-        if(n.type==="fetch"){
-          // errors & latency
-          if(Math.random() < n.params.err){
-            n.stats.err++; errCount++;
-            dropCount++; n.stats.drop++;
-            continue;
-          }
-          // latency increases "arrival time"
-          it.createdAt -= n.params.latency; // older -> more perceived latency later (simple hack)
-        }
-
-        if(n.type==="filter"){
-          // strict -> higher drop probability, also drop low value/noisy items
-          const strict = n.params.strict;
-          const keepMin = n.params.keepValueMin;
-          const dropProb = clamp(strict*0.35 + it.noise*0.45 + (keepMin - it.value)*0.65, 0, 0.98);
-          if(it.value < keepMin || Math.random() < dropProb){
-            n.stats.drop++; dropCount++;
-            continue;
-          }
-        }
-
-        if(n.type==="dedup"){
-          const key = it.dupKey;
-          dupIn++;
-          const seenAt = n.seen.get(key);
-          if(seenAt !== undefined){
-            // duplicate -> drop
-            n.stats.drop++; dropCount++;
-            continue;
-          }else{
-            n.seen.set(key, simTimeMin);
-            // expire old keys
-            if(n.seen.size > 1200){
-              // cheap prune
-              let k=0;
-              for(const [kk,tt] of n.seen){
-                if(simTimeMin - tt > 15){ n.seen.delete(kk); }
-                if(++k>80) break;
-              }
-            }
-            dupOut++;
-          }
-        }
-
-        if(n.type==="digest"){
-          n.bucket.push(it);
-          const elapsed = simTimeMin - n.lastFlush;
-          const needFlush = (n.bucket.length >= n.params.batch) || (elapsed >= n.params.flushMin && n.bucket.length>0);
-          if(needFlush){
-            // turn bucket into 1 digest item
-            const batch = n.bucket.splice(0, n.bucket.length);
-            n.lastFlush = simTimeMin;
-            const avgValue = batch.reduce((s,x)=>s+x.value,0)/batch.length;
-            const avgNoise = batch.reduce((s,x)=>s+x.noise,0)/batch.length;
-            const digest = {
-              id: "d"+Math.random().toString(16).slice(2),
-              topic: "digest",
-              value: clamp(avgValue+0.08, 0, 1),
-              noise: clamp(avgNoise-0.15, 0, 1),
-              dupKey: "digest_"+Math.floor(simTimeMin),
-              createdAt: batch.reduce((m,x)=>Math.min(m,x.createdAt), simTimeMin),
-              hops: it.hops+1,
-              batchSize: batch.length
-            };
-            moved.push(digest);
-            logAdd(`🗞️ Digest 产出：${batch.length}→1（value=${avgValue.toFixed(2)}）`);
-          }
-          continue; // digest doesn't forward raw items by default
-        }
-
-        // default: forward item
-        moved.push(it);
-      }
-
-      // send moved items to outgoing nodes
-      if(moved.length){
-        for(const toId of n.out){
-          const to = nodes.find(x=>x.id===toId);
-          if(!to) continue;
-          for(const it of moved){
-            // Splitter: naive branching by topic keywords
-            if(n.type==="split"){
-              // For now, just pass all (we'll add UI for branches later)
-              to.queue.push(it);
-              to.stats.in++;
-            }else{
-              to.queue.push(it);
-              to.stats.in++;
-            }
-          }
-        }
-        n.stats.out += moved.length;
-        if(n.type==="output"){
-          // Count output KPI
-          outCount += moved.length;
-          for(const it of moved){
-            const lat = clamp(simTimeMin - it.createdAt, 0, 999);
-            latSum += lat; latN++;
-            if(it.value >= 0.75) highOut++;
-          }
-        }
-      }
+  if(!S.chain.visible && S.turn >= 3 && conf >= 45){
+    S.chain.visible = true;
+    S.chain.prefType = bestType;
+    S.chain.stage = 1;
+    S.chain.confidence = conf;
+    S.chain.lastUpdateTurn = S.turn;
+  } else if(S.chain.visible){
+    if(conf >= 60 && bestType !== S.chain.prefType && rng() < 0.25){
+      S.chain.prefType = bestType;
     }
+    S.chain.confidence = clamp(S.chain.confidence*0.75 + conf*0.25, 0, 100);
+    S.chain.lastUpdateTurn = S.turn;
+    if(S.chain.stage === 1 && S.stability >= 20) S.chain.stage = 2;
+    if(S.chain.stage === 2 && S.stability >= 45 && S.valueCaptured >= 18) S.chain.stage = 3;
+  }
+}
+function updateStability(){
+  const digestCount = S.digest.filter(it=>it.turn === S.turn).length;
+  const types = S.digest.filter(it=>it.turn === S.turn).map(it=>it.type).sort().join("");
+  const deltaCount = Math.abs(digestCount - (S.lastDigestCount || digestCount));
+  const deltaTypes = (types === (S.lastDigestTypes||types)) ? 0 : 1;
+  let gain = 0;
+  gain += clamp(8 - deltaCount*3, 0, 8);
+  gain += (deltaTypes === 0 ? 3 : 0);
+  gain += clamp(S.trust/50, 0, 2);
+  if(S.gap.intervened) gain -= 4;
+  S.stability = clamp(S.stability + gain - 4, 0, 100);
+  S.lastDigestCount = digestCount;
+  S.lastDigestTypes = types;
+}
+function spendAttention(cost){
+  S.attention = clamp(S.attention - cost, 0, 999);
+}
+function recordWaste(it){
+  if(!it.read && !it.stashed) return;
+  const pref = S.chain.prefType;
+  const match = pref ? (it.type === pref) : false;
+  const waste = (!match && it.potential < 0.35) ? 2 : (!match ? 1 : 0);
+  S.waste += waste;
+}
 
-    // advance time
-    simTimeMin += dtMin;
-
-    pushKpi({
-      t: simTimeMin,
-      out: outCount,
-      drop: dropCount,
-      dupIn, dupOut,
-      err: errCount,
-      highIn, highOut,
-      lat: latN ? (latSum/latN) : 0
+function applyPipelineToInbox(){
+  if(!S.unlocked.filter){
+    let cand = [...currentInbox];
+    cand.sort(()=>rng()-0.5);
+    cand = cand.slice(0, clamp(S.pipeline.cap, 4, 14));
+    for(const it of cand){
+      S.digest.unshift({...it, _digestedTurn:S.turn});
+    }
+    return;
+  }
+  let cand = [...currentInbox];
+  if(S.pipeline.dedup){
+    const seen = new Set();
+    cand = cand.filter(it=>{
+      const k = dedupKey(it);
+      if(seen.has(k)) return false;
+      seen.add(k);
+      return true;
     });
-
-    updateKPI();
-    document.getElementById("itemTxt").textContent = nodes.reduce((s,n)=>s+n.queue.length,0).toString();
   }
-
-  // ===== KPI Display =====
-  function sumWindow(){
-    let out=0, drop=0, err=0, dupIn=0, dupOut=0, highIn=0, highOut=0;
-    let latSum=0, latN=0;
-    for(const e of kpiEvents){
-      out += e.out; drop += e.drop; err += e.err;
-      dupIn += e.dupIn; dupOut += e.dupOut;
-      highIn += e.highIn; highOut += e.highOut;
-      if(e.lat>0){ latSum += e.lat; latN++; }
+  cand.forEach(it => it._score = scoreItemForPipeline(it));
+  cand.sort((a,b)=>b._score - a._score);
+  cand = cand.slice(0, clamp(S.pipeline.cap, 4, 14));
+  const delay = clamp(S.pipeline.buffer, 0, 3);
+  if(delay > 0){
+    for(const it of cand){
+      S.bufferQ.push({releaseTurn: S.turn + delay, item: it});
     }
-    return {out, drop, err, dupIn, dupOut, highIn, highOut, lat: latN?latSum/latN:0};
-  }
-
-  function updateKPI(){
-    const s = sumWindow();
-    const perMin = s.out / windowMin;
-    const noise = (s.out+s.drop)>0 ? (s.drop/(s.out+s.drop)) : 0;
-    const dupWaste = s.dupIn>0 ? (1 - (s.dupOut/s.dupIn)) : 0;
-    const cov = s.highIn>0 ? (s.highOut/s.highIn) : 0;
-    const err = (s.out+s.drop)>0 ? (s.err/(s.out+s.drop)) : 0;
-
-    document.getElementById("kThrough").textContent = (Math.round(perMin*10)/10).toFixed(1) + "/m";
-    document.getElementById("kNoise").textContent = fmtPct(noise);
-    document.getElementById("kDup").textContent = fmtPct(dupWaste);
-    document.getElementById("kLat").textContent = fmtMin(s.lat);
-    document.getElementById("kCov").textContent = fmtPct(cov);
-    document.getElementById("kErr").textContent = fmtPct(err);
-  }
-
-  // ===== UI: Inspector =====
-  const inspector = document.getElementById("inspector");
-  let selectedNodeId = null;
-  function renderInspector(){
-    const n = nodes.find(x=>x.id===selectedNodeId);
-    if(!n){
-      inspector.innerHTML = `<div class="help">点一个节点查看参数并调整。</div>`;
-      return;
+  } else {
+    for(const it of cand){
+      S.digest.unshift({...it, _digestedTurn:S.turn});
     }
-    const t = NodeType[n.type];
-    const p = n.params || {};
-    const mkSlider = (key, min, max, step, fmt=(v)=>v.toFixed(2)) => {
-      const v = p[key];
-      const id = "sl_"+key;
-      return `
-        <div style="margin:10px 0 0">
-          <div class="row2" style="justify-content:space-between">
-            <div><b>${key}</b> <span class="tag">${fmt(v)}</span></div>
-          </div>
-          <input id="${id}" type="range" min="${min}" max="${max}" step="${step}" value="${v}" style="width:100%"/>
-        </div>
-      `;
-    };
+  }
+}
+function flushBuffer(){
+  if(S.pipeline.buffer <= 0) return;
+  const ready = S.bufferQ.filter(x => x.releaseTurn <= S.turn);
+  S.bufferQ = S.bufferQ.filter(x => x.releaseTurn > S.turn);
+  for(const x of ready){
+    S.digest.unshift({...x.item, _digestedTurn:S.turn});
+  }
+}
 
-    let html = `
-      <div class="logItem">
-        <b>${t.name} <span class="tag">${n.type}</span></b>
-        <div class="help mono">id=${n.id} • queue=${n.queue.length}</div>
+function updateTutorial(){
+  const p = phaseOfTurn(S.turn).idx;
+  const box = el("tutorialBox");
+  if(p === 1){
+    box.innerHTML = `<b>探索期：</b>你还不知道自己在追求什么。用最少注意力暂存你认为“可能有用”的信号。<br/>
+    目标：在 5 回合内让「潜在动机链」显形（或至少形成偏好）。`;
+  } else if(p === 2){
+    box.innerHTML = `<b>建线期：</b>粗筛器已解锁。你可以调整 A/B/C/D 的权重、去重、日报上限。<br/>
+    目标：让日报更“可读”（更少、但更集中），并尽量减少注意力消耗。`;
+  } else if(p === 3){
+    box.innerHTML = `<b>稳定期：</b>升级已解锁。提升精度/缓冲可让输出更稳定，但也可能制造黑箱漂移。<br/>
+    目标：把「稳定度」推到 45+，并尽量不手动介入。`;
+  } else if(p === 4){
+    const miss = S.gap.typeMissing ? `<span class="badge warn">缺席：${S.gap.typeMissing}</span>` : "";
+    box.innerHTML = `<b>放手期：</b>系统经历一次“缺席事件”。${miss}<br/>
+    你可以手动介入扫描（代价高、信任下降），也可以选择等待系统自行恢复。<br/>
+    目标：尽量不介入撑过 3 回合。`;
+  } else {
+    box.innerHTML = `<b>回顾期：</b>观察注意力、信任与稳定。<br/>
+    点击“导出蓝图”保存策略，然后重开做对照实验。`;
+  }
+  if(S.unlocked.upgrades && S.pipeline.anomaly){
+    const c = S.digest.filter(it => it.turn === S.turn).length;
+    const last = S.lastDigestCount || c;
+    const diff = Math.abs(c-last);
+    if(diff >= 4){
+      box.innerHTML += `<br/><span class="badge bad">异常：</span>今日输出节奏偏离历史，可能需要调整上限/缓冲/精度。`;
+    }
+  }
+}
+
+function renderItems(container, items, mode){
+  container.innerHTML = "";
+  if(items.length === 0){
+    container.innerHTML = `<div class="item" style="grid-template-columns:1fr; color:rgba(167,175,192,.75); font-family:var(--mono);">（空）</div>`;
+    return;
+  }
+  for(const it of items){
+    const row = document.createElement("div");
+    row.className = "item";
+    const tag = document.createElement("div");
+    tag.className = typeColorClass(it.type);
+    tag.textContent = it.type;
+
+    const mid = document.createElement("div");
+    const a = [];
+    a.push(it.noise ? `<span class="badge bad">噪</span>` : `<span class="badge good">净</span>`);
+    a.push(`<span class="badge">W${it.window}</span>`);
+    if(S.chain.visible && it.type === S.chain.prefType) a.push(`<span class="badge good">匹配</span>`);
+    if(it._settled) a.push(`<span class="badge">已结算</span>`);
+    mid.innerHTML = `
+      <div class="meta">
+        <span>t<b>${it.turn+1}</b></span>
+        <span>强度<b>${fmt(it.strength)}</b></span>
+        <span>紧迫<b>${fmt(it.urgency)}</b></span>
+        <span>新鲜<b>${fmt(it.novelty)}</b></span>
       </div>
+      <div style="margin-top:6px">${a.join(" ")}</div>
     `;
 
-    if(n.type==="source"){
-      html += mkSlider("rate", 0, 60, 1, v=>v.toFixed(0)+" /min");
-      html += mkSlider("noise", 0, 1, 0.01);
-      html += mkSlider("dup", 0, 1, 0.01);
-      html += mkSlider("value", 0, 1, 0.01);
-    }else if(n.type==="fetch"){
-      html += mkSlider("throughput", 1, 120, 1, v=>v.toFixed(0)+" /min");
-      html += mkSlider("err", 0, 0.2, 0.005);
-      html += mkSlider("latency", 0, 2, 0.05, v=>v.toFixed(2)+" m");
-    }else if(n.type==="filter"){
-      html += mkSlider("strict", 0, 1, 0.01);
-      html += mkSlider("keepValueMin", 0, 1, 0.01);
-    }else if(n.type==="dedup"){
-      html += mkSlider("threshold", 0.5, 0.99, 0.01);
-      html += `<div class="help" style="margin-top:8px">提示：这里用 dupKey 模拟重复。后续可换成标题 hash / 相似度。</div>`;
-    }else if(n.type==="digest"){
-      html += mkSlider("batch", 1, 50, 1, v=>v.toFixed(0));
-      html += mkSlider("flushMin", 0.2, 10, 0.1, v=>v.toFixed(1)+" m");
-    }else if(n.type==="output"){
-      html += mkSlider("maxPerMin", 1, 120, 1, v=>v.toFixed(0)+" /min");
-    }else if(n.type==="split"){
-      html += `<div class="help">Split 模块在下一版会做成多输出口分流（目前等同直通）。</div>`;
+    const right = document.createElement("div");
+    right.className = "actions";
+
+    const addBtn = (text, onClick, disabled=false) => {
+      const b = document.createElement("button");
+      b.textContent = text;
+      b.disabled = disabled;
+      b.onclick = onClick;
+      right.appendChild(b);
+    };
+
+    if(mode === "inbox"){
+      addBtn("读", () => actRead(it.id));
+      addBtn("暂存", () => actStash(it.id));
+      addBtn("忽略", () => actIgnore(it.id));
+    } else if(mode === "stash"){
+      addBtn(it.read ? "已读" : "读", () => actRead(it.id), it.read);
+      addBtn("移除", () => {
+        S.stash = S.stash.filter(x => x.id !== it.id);
+        const hi = S.history.find(x => x.id === it.id);
+        if(hi) hi.stashed = false;
+        saveState(); render();
+      });
+    } else if(mode === "digest"){
+      addBtn(it.read ? "已读" : "读", () => actRead(it.id), it.read);
+      addBtn("暂存", () => actStash(it.id));
     }
 
-    html += `<div class="row2" style="margin-top:10px">
-      <button class="btn small danger" id="btnDelNode">删除节点</button>
-    </div>`;
+    row.appendChild(tag);
+    row.appendChild(mid);
+    row.appendChild(right);
+    container.appendChild(row);
+  }
+}
 
-    inspector.innerHTML = html;
+function render(){
+  updateUnlocks();
+  const p = phaseOfTurn(S.turn);
+  el("phaseLabel").textContent = `阶段：${p.name}（${p.range}）`;
+  el("kpiTurn").textContent = `${S.turn} / ${S.totalTurns}`;
+  el("kpiAttention").textContent = `${S.attention}`;
+  el("kpiTrust").textContent = `${Math.round(S.trust)}`;
+  el("kpiStability").textContent = `${Math.round(S.stability)}`;
+  el("kpiValue").textContent = `${Math.round(S.valueCaptured)}`;
+  el("kpiWaste").textContent = `${Math.round(S.waste)}`;
 
-    // wire sliders
-    for(const k of Object.keys(p)){
-      const el = document.getElementById("sl_"+k);
-      if(!el) continue;
-      el.addEventListener("input", () => {
-        p[k] = parseFloat(el.value);
-        renderInspector();
-      }, {passive:true});
+  if(S.chain.visible){
+    el("chainBadge").className = badgeClass(S.chain.confidence >= 70 ? "good" : (S.chain.confidence >= 50 ? "warn" : "bad"));
+    el("chainBadge").textContent = `显形 · 置信 ${Math.round(S.chain.confidence)}%`;
+    el("prefType").textContent = S.chain.prefType || "?";
+    el("chainStage").textContent = ["—","初现","可用","成熟"][S.chain.stage] || "—";
+    el("chainText").textContent = "你正在形成一条动机链：你更愿意围绕某类信号做判断。系统会用延迟结算检验这条链是否真的推进了你。";
+  } else {
+    el("chainBadge").className = "badge";
+    el("chainBadge").textContent = "未显形";
+    el("prefType").textContent = "?";
+    el("chainStage").textContent = "—";
+    el("chainText").textContent = "先不要急着“选方向”。用暂存与回看让偏好自己浮出来。";
+  }
+
+  el("filterBadge").textContent = S.unlocked.filter ? "已解锁" : "锁定";
+  el("filterBadge").className = badgeClass(S.unlocked.filter ? "good" : "warn");
+  el("upgradeBadge").textContent = S.unlocked.upgrades ? "已解锁" : "锁定";
+  el("upgradeBadge").className = badgeClass(S.unlocked.upgrades ? "good" : "warn");
+  el("toolFilter").style.opacity = S.unlocked.filter ? "1" : ".55";
+  el("toolUpgrades").style.opacity = S.unlocked.upgrades ? "1" : ".55";
+
+  for(const id of ["wA","wB","wC","wD","dedup","cap"]) el(id).disabled = !S.unlocked.filter;
+  for(const id of ["acc","buf","anom"]) el(id).disabled = !S.unlocked.upgrades;
+  el("btnScan").disabled = !(S.unlocked.manualScan && S.attention >= 15);
+
+  ["A","B","C","D"].forEach(k=> el("w"+k+"Val").textContent = S.pipeline.weights[k]);
+  el("accVal").textContent = `${S.pipeline.accuracy}%`;
+  el("bufVal").textContent = `${S.pipeline.buffer}`;
+
+  renderItems(el("inbox"), currentInbox, "inbox");
+  renderItems(el("stash"), S.stash.slice(0,60), "stash");
+  const digestView = S.digest.filter(it => S.turn - it.turn <= 3).slice(0,60);
+  renderItems(el("digest"), digestView, "digest");
+
+  el("inboxBadge").textContent = `${currentInbox.length}`;
+  el("stashBadge").textContent = `${S.stash.length}`;
+  el("digestBadge").textContent = `${digestView.length}`;
+
+  el("btnRun").disabled = S.running;
+  el("btnPause").disabled = !S.running;
+  el("btnStep").disabled = S.running;
+
+  updateTutorial();
+}
+
+function findItem(id){
+  return S.history.find(x => x.id === id) || currentInbox.find(x => x.id === id);
+}
+function actRead(id){
+  const it = findItem(id); if(!it) return;
+  if(S.attention <= 0) return;
+  if(!it.read){
+    it.read = true;
+    spendAttention(1 + (it.noise ? 1 : 0));
+    recordWaste(it);
+    saveState();
+  }
+  render();
+}
+function actStash(id){
+  const it = findItem(id); if(!it) return;
+  if(S.attention <= 0) return;
+  if(!it.stashed){
+    it.stashed = true;
+    spendAttention(2);
+    if(!S.stash.find(x => x.id === id)) S.stash.unshift(it);
+    recordWaste(it);
+    saveState();
+  }
+  render();
+}
+function actIgnore(id){
+  const it = findItem(id); if(!it) return;
+  if(!it.ignored){
+    it.ignored = true;
+    saveState();
+  }
+  render();
+}
+
+function beginTurn(){
+  updateUnlocks();
+  const p = phaseOfTurn(S.turn).idx;
+  if(p === 4 && !S.gap.active){
+    S.gap.active = true;
+    S.gap.startedTurn = S.turn;
+    const types = ["A","B","C","D"];
+    S.gap.typeMissing = (S.chain.visible && rng() < 0.7) ? S.chain.prefType : types[Math.floor(rng()*4)];
+    S.gap.intervened = false;
+  }
+  if(S.gap.active && S.turn - S.gap.startedTurn >= 3){
+    S.gap.active = false;
+    S.gap.typeMissing = null;
+  }
+
+  currentInbox = genInboxForTurn(S.turn);
+  for(const it of currentInbox) S.history.push({...it});
+  render();
+}
+function endTurnCore(){
+  settleDelayedValue();
+  updateStability();
+  updateChainInference();
+  updateTutorial();
+  saveState();
+  S.turn = clamp(S.turn + 1, 0, S.totalTurns);
+  if(S.turn >= S.totalTurns){
+    S.running = false;
+    render();
+    showReviewModal();
+    return;
+  }
+  beginTurn();
+}
+function endTurn(){
+  applyPipelineToInbox();
+  flushBuffer();
+  endTurnCore();
+}
+
+let timer = null;
+function runTick(){ if(S.running) endTurn(); }
+function startRunning(){
+  if(S.turn >= S.totalTurns) return;
+  S.running = true;
+  render();
+  timer = setInterval(runTick, 1200);
+}
+function pauseRunning(){
+  S.running = false;
+  if(timer) clearInterval(timer);
+  timer = null;
+  render();
+}
+function stepOnce(){ endTurn(); }
+
+function manualScan(){
+  if(!S.unlocked.manualScan) return;
+  if(S.attention < 15) return;
+  spendAttention(15);
+  S.trust = clamp(S.trust - 8, 0, 100);
+  if(S.gap.active) S.gap.intervened = true;
+
+  const bonus = [];
+  for(let i=0;i<4;i++){
+    const it = genItem(S.turn);
+    if(S.gap.active && S.gap.typeMissing){
+      it.type = S.gap.typeMissing;
+      it.noise = false;
+      it.potential = clamp(it.potential + 0.25, 0, 1);
+    } else {
+      it.noise = false;
+      it.potential = clamp(it.potential + 0.2, 0, 1);
     }
-
-    const del = document.getElementById("btnDelNode");
-    if(del){
-      del.onclick = () => {
-        deleteNode(n.id);
-        selectedNodeId = null;
-        renderInspector();
-        toast("已删除节点");
-      };
-    }
+    bonus.push(it);
+    S.history.push({...it});
   }
+  currentInbox = bonus.concat(currentInbox);
+  saveState(); render();
+}
 
-  function deleteNode(id){
-    nodes = nodes.filter(n=>n.id!==id);
-    edges = edges.filter(e=>e.a!==id && e.b!==id);
-    rebuildAdj();
+function resetGame(){
+  pauseRunning();
+  localStorage.removeItem("infoFactory30_state");
+  S = DEFAULT_STATE();
+  // apply to inputs will happen in bootstrap
+  bootstrap(true);
+}
+
+function blueprintObj(){
+  return { v:1, seed:S.seed, pipeline:S.pipeline, note:"info-factory-30min blueprint", exportedAt: nowIso() };
+}
+function showModal(title, h, text, hint){
+  el("modalTitle").textContent = title;
+  el("modalH").textContent = h;
+  el("modalPre").textContent = text;
+  el("modalHint").textContent = hint || "";
+  el("modalBack").style.display = "flex";
+}
+function closeModal(){ el("modalBack").style.display = "none"; }
+async function copyModalText(){
+  try{
+    await navigator.clipboard.writeText(el("modalPre").textContent);
+    el("modalHint").textContent = "已复制到剪贴板。";
+  }catch(e){
+    el("modalHint").textContent = "复制失败：请长按文本手动复制。";
   }
+}
+async function pasteAndImport(){
+  try{
+    const t = await navigator.clipboard.readText();
+    if(t && t.trim().length > 0) el("modalPre").textContent = t;
+  }catch(e){}
+  try{
+    const obj = JSON.parse(el("modalPre").textContent);
+    if(!obj.pipeline) throw new Error("missing pipeline");
+    const p = obj.pipeline;
+    S.pipeline.weights = {
+      A: clamp(parseInt(p.weights?.A ?? 25,10), 0, 100),
+      B: clamp(parseInt(p.weights?.B ?? 25,10), 0, 100),
+      C: clamp(parseInt(p.weights?.C ?? 25,10), 0, 100),
+      D: clamp(parseInt(p.weights?.D ?? 25,10), 0, 100),
+    };
+    S.pipeline.dedup = !!p.dedup;
+    S.pipeline.cap = clamp(parseInt(p.cap ?? 10,10), 4, 14);
+    S.pipeline.accuracy = clamp(parseInt(p.accuracy ?? 55,10), 40, 95);
+    S.pipeline.buffer = clamp(parseInt(p.buffer ?? 0,10), 0, 3);
+    S.pipeline.anomaly = !!p.anomaly;
+    // update UI controls too
+    el("wA").value = S.pipeline.weights.A;
+    el("wB").value = S.pipeline.weights.B;
+    el("wC").value = S.pipeline.weights.C;
+    el("wD").value = S.pipeline.weights.D;
+    el("dedup").checked = S.pipeline.dedup;
+    el("cap").value = S.pipeline.cap;
+    el("acc").value = S.pipeline.accuracy;
+    el("buf").value = S.pipeline.buffer;
+    el("anom").checked = S.pipeline.anomaly;
 
-  // ===== Log =====
-  const logEl = document.getElementById("log");
-  let logs = [];
-  function logAdd(msg){
-    const t = Math.floor(simTimeMin*60); // seconds
-    logs.unshift({t, msg});
-    logs = logs.slice(0, 20);
-    renderLog();
+    saveState(); render();
+    el("modalHint").textContent = "导入成功：已应用到当前信息流工具箱。";
+  }catch(e){
+    el("modalHint").textContent = "导入失败：JSON 格式不正确或缺少 pipeline。";
   }
-  function logClear(){ logs=[]; renderLog(); }
-  function renderLog(){
-    logEl.innerHTML = logs.map(x=>{
-      const m = Math.floor(x.t/60), s = x.t%60;
-      return `<div class="logItem"><b>${x.msg}</b><div class="help mono">${m}m ${s}s</div></div>`;
-    }).join("") || `<div class="help">暂无。</div>`;
-  }
-
-  // ===== Interaction: drag nodes, connect nodes, delete edge =====
-  let pointer = {down:false, id:null, ox:0, oy:0, mode:"none", x:0, y:0};
-  let connectFrom = null; // node id
-  function hitNode(px, py){
-    // topmost last
-    for(let i=nodes.length-1;i>=0;i--){
-      const n=nodes[i];
-      if(px>=n.x && px<=n.x+n.w && py>=n.y && py<=n.y+n.h) return n;
-    }
-    return null;
-  }
-  function distToSegment(px,py,x1,y1,x2,y2){
-    const A=px-x1, B=py-y1, C=x2-x1, D=y2-y1;
-    const dot=A*C+B*D;
-    const len=C*C+D*D;
-    let t = len? dot/len : 0;
-    t = clamp(t,0,1);
-    const x=x1+t*C, y=y1+t*D;
-    const dx=px-x, dy=py-y;
-    return Math.sqrt(dx*dx+dy*dy);
-  }
-  function hitEdge(px, py){
-    for(let i=edges.length-1;i>=0;i--){
-      const e=edges[i];
-      const a=nodes.find(n=>n.id===e.a);
-      const b=nodes.find(n=>n.id===e.b);
-      if(!a||!b) continue;
-      const x1=a.x+a.w, y1=a.y+a.h/2;
-      const x2=b.x, y2=b.y+b.h/2;
-      const d=distToSegment(px,py,x1,y1,x2,y2);
-      if(d<10) return e;
-    }
-    return null;
-  }
-
-  function selectNode(id){
-    selectedNodeId = id;
-    renderInspector();
-  }
-
-  function bringToFront(n){
-    nodes = nodes.filter(x=>x.id!==n.id);
-    nodes.push(n);
-  }
-
-  function canvasPos(ev){
-    const r = canvas.getBoundingClientRect();
-    const x = (ev.clientX - r.left);
-    const y = (ev.clientY - r.top);
-    return {x, y};
-  }
-
-  canvas.addEventListener("pointerdown", (ev) => {
-    ev.preventDefault();
-    canvas.setPointerCapture(ev.pointerId);
-    const {x,y} = canvasPos(ev);
-    pointer.down=true; pointer.x=x; pointer.y=y;
-    const n = hitNode(x,y);
-    const e = hitEdge(x,y);
-
-    if(e && !n){
-      // delete edge
-      edges = edges.filter(xx=>xx.id!==e.id);
-      rebuildAdj();
-      toast("已删除连线");
-      return;
-    }
-
-    if(n){
-      bringToFront(n);
-      selectNode(n.id);
-      pointer.id=n.id;
-      pointer.ox = x - n.x;
-      pointer.oy = y - n.y;
-
-      // connect mode if tap twice: if connectFrom exists and different node
-      if(connectFrom && connectFrom !== n.id){
-        // prevent cycles by basic check (optional)
-        edges.push(makeEdge(nodes.find(a=>a.id===connectFrom), n));
-        rebuildAdj();
-        toast("已连线");
-        connectFrom = null;
-      }else{
-        connectFrom = n.id;
-        toast("选择起点：再点一个节点以连线");
-        pointer.mode="drag";
-      }
-    }else{
-      selectedNodeId=null;
-      renderInspector();
-      connectFrom=null;
-    }
-  }, {passive:false});
-
-  canvas.addEventListener("pointermove", (ev) => {
-    if(!pointer.down) return;
-    const {x,y} = canvasPos(ev);
-    pointer.x=x; pointer.y=y;
-    const n = nodes.find(nn=>nn.id===pointer.id);
-    if(n && pointer.mode==="drag"){
-      n.x = x - pointer.ox;
-      n.y = y - pointer.oy;
-      // keep inside bounds
-      n.x = clamp(n.x, 10, wrap.clientWidth - n.w - 10);
-      n.y = clamp(n.y, 10, wrap.clientHeight - n.h - 10);
-    }
-  }, {passive:true});
-
-  canvas.addEventListener("pointerup", (ev) => {
-    pointer.down=false; pointer.id=null; pointer.mode="none";
-  }, {passive:true});
-
-  // ===== Draw =====
-  function draw(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    // grid
-    const w=wrap.clientWidth, h=wrap.clientHeight;
-    ctx.save();
-    ctx.globalAlpha = 0.25;
-    ctx.strokeStyle = "rgba(38,50,68,.55)";
-    ctx.lineWidth = 1;
-    const step=40;
-    for(let x=0;x<w;x+=step){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
-    for(let y=0;y<h;y+=step){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
-    ctx.restore();
-
-    // edges
-    for(const e of edges){
-      const a = nodes.find(n=>n.id===e.a);
-      const b = nodes.find(n=>n.id===e.b);
-      if(!a||!b) continue;
-      const x1=a.x+a.w, y1=a.y+a.h/2;
-      const x2=b.x, y2=b.y+b.h/2;
-
-      ctx.save();
-      ctx.strokeStyle = "rgba(106,168,255,.55)";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      const mx = (x1+x2)/2;
-      ctx.moveTo(x1,y1);
-      ctx.bezierCurveTo(mx,y1, mx,y2, x2,y2);
-      ctx.stroke();
-      ctx.restore();
-
-      // arrow
-      const ang = Math.atan2(y2-y1, x2-x1);
-      const ax = x2-10*Math.cos(ang), ay=y2-10*Math.sin(ang);
-      ctx.save();
-      ctx.fillStyle="rgba(106,168,255,.75)";
-      ctx.beginPath();
-      ctx.moveTo(x2,y2);
-      ctx.lineTo(ax + 6*Math.cos(ang+Math.PI*0.6), ay + 6*Math.sin(ang+Math.PI*0.6));
-      ctx.lineTo(ax + 6*Math.cos(ang-Math.PI*0.6), ay + 6*Math.sin(ang-Math.PI*0.6));
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-    }
-
-    // flowing items (dots)
-    // Represent each node queue with small dots on right side
-    for(const n of nodes){
-      const qn = Math.min(18, n.queue.length);
-      for(let i=0;i<qn;i++){
-        const it = n.queue[i];
-        const tx = n.x + n.w - 12 - (i%6)*6;
-        const ty = n.y + 14 + Math.floor(i/6)*8;
-        ctx.beginPath();
-        ctx.fillStyle = it.value>0.75 ? "rgba(69,212,131,.95)" : "rgba(215,224,238,.75)";
-        ctx.arc(tx, ty, 2.2, 0, Math.PI*2);
-        ctx.fill();
-      }
-    }
-
-    // nodes
-    for(const n of nodes){
-      const t = NodeType[n.type];
-      const isSel = (n.id===selectedNodeId);
-      ctx.save();
-      // shadow
-      ctx.shadowColor="rgba(0,0,0,.35)";
-      ctx.shadowBlur=14;
-      ctx.shadowOffsetY=6;
-
-      // body
-      const r=14;
-      roundRect(ctx, n.x, n.y, n.w, n.h, r);
-      ctx.fillStyle = isSel ? "rgba(18,27,40,.92)" : "rgba(18,27,40,.72)";
-      ctx.fill();
-      ctx.shadowBlur=0;
-
-      // border
-      ctx.lineWidth = isSel ? 2.5 : 1.5;
-      ctx.strokeStyle = isSel ? "rgba(106,168,255,.95)" : "rgba(38,50,68,.85)";
-      ctx.stroke();
-
-      // header stripe
-      roundRect(ctx, n.x, n.y, n.w, 22, r);
-      ctx.fillStyle = "rgba(15,22,34,.9)";
-      ctx.fill();
-      ctx.fillStyle = t.color;
-      ctx.globalAlpha = 0.9;
-      roundRect(ctx, n.x, n.y, 4, n.h, r);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-
-      // text
-      ctx.fillStyle = "rgba(215,224,238,.95)";
-      ctx.font = "700 13px system-ui,-apple-system,Segoe UI,Roboto,PingFang SC";
-      ctx.fillText(t.name, n.x+10, n.y+15);
-      ctx.fillStyle = "rgba(127,147,173,.95)";
-      ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
-      ctx.fillText("q:"+n.queue.length, n.x+10, n.y+44);
-
-      ctx.restore();
-    }
-
-    // connect hint line
-    if(connectFrom){
-      const a = nodes.find(n=>n.id===connectFrom);
-      if(a){
-        ctx.save();
-        ctx.strokeStyle="rgba(255,204,102,.55)";
-        ctx.lineWidth=2;
-        ctx.setLineDash([6,6]);
-        ctx.beginPath();
-        ctx.moveTo(a.x+a.w, a.y+a.h/2);
-        ctx.lineTo(pointer.x, pointer.y);
-        ctx.stroke();
-        ctx.restore();
-      }
-    }
-
-    requestAnimationFrame(draw);
-  }
-
-  function roundRect(ctx, x, y, w, h, r){
-    const rr = Math.min(r, w/2, h/2);
-    ctx.beginPath();
-    ctx.moveTo(x+rr, y);
-    ctx.arcTo(x+w, y, x+w, y+h, rr);
-    ctx.arcTo(x+w, y+h, x, y+h, rr);
-    ctx.arcTo(x, y+h, x, y, rr);
-    ctx.arcTo(x, y, x+w, y, rr);
-    ctx.closePath();
-  }
-
-  // ===== Controls =====
-  const btnPlay = document.getElementById("btnPlay");
-  const btnStep = document.getElementById("btnStep");
-  const btnReset = document.getElementById("btnReset");
-  const btnSave = document.getElementById("btnSave");
-  const btnLoad = document.getElementById("btnLoad");
-  const modeTxt = document.getElementById("modeTxt");
-
-  function setRunning(v){
-    running = v;
-    btnPlay.textContent = running ? "⏸︎ 暂停" : "▶︎ 运行";
-    modeTxt.textContent = running ? "运行" : "编辑";
-  }
-
-  btnPlay.onclick = () => { setRunning(!running); };
-  btnStep.onclick = () => { if(!running) step(); };
-  btnReset.onclick = () => { seed(); simTimeMin=0; kpiEvents=[]; updateKPI(); setRunning(false); };
-  btnSave.onclick = () => {
-    const data = { nextId, nodes: nodes.map(n=>({
-      id:n.id,type:n.type,x:n.x,y:n.y,w:n.w,h:n.h,params:n.params,
-      extra: { lastFlush:n.lastFlush||0, seen: n.seen ? Array.from(n.seen.entries()).slice(0,200) : null }
-    })), edges };
-    localStorage.setItem("infoFactoryProto_v1", JSON.stringify(data));
-    toast("已保存到本地");
+}
+function exportBlueprint(){
+  const obj = blueprintObj();
+  showModal("导出蓝图", "导出内容（JSON）", JSON.stringify(obj, null, 2),
+    "把 JSON 复制出来，提交到仓库或发给朋友，就能对照不同策略。");
+}
+function importBlueprint(){
+  showModal("导入蓝图", "粘贴 JSON 并导入", "{\n  \"v\": 1,\n  \"pipeline\": {\n    \"weights\": {\"A\": 25, \"B\": 25, \"C\": 25, \"D\": 25},\n    \"dedup\": false,\n    \"cap\": 10,\n    \"accuracy\": 55,\n    \"buffer\": 0,\n    \"anomaly\": false\n  }\n}\n",
+  "点“从剪贴板粘贴并导入”，或手动编辑后复制粘贴到此处。");
+}
+function showReviewModal(){
+  const summary = {
+    turns: S.totalTurns,
+    attentionLeft: S.attention,
+    trust: Math.round(S.trust),
+    stability: Math.round(S.stability),
+    valueCaptured: Math.round(S.valueCaptured),
+    waste: Math.round(S.waste),
+    chain: S.chain,
+    pipeline: S.pipeline,
+    tip: "导出蓝图→重开→用不同权重/上限/缓冲做对照实验。"
   };
-  btnLoad.onclick = () => {
-    const raw = localStorage.getItem("infoFactoryProto_v1");
-    if(!raw){ toast("没有保存数据"); return; }
-    const data = JSON.parse(raw);
-    nextId = data.nextId || 1;
-    nodes = data.nodes.map(nn=>{
-      const n = makeNode(nn.type, nn.x, nn.y);
-      n.id = nn.id; n.w=nn.w; n.h=nn.h; n.params = nn.params;
-      if(n.type==="dedup" && nn.extra && nn.extra.seen){
-        n.seen = new Map(nn.extra.seen);
-      }
-      if(n.type==="digest" && nn.extra){
-        n.lastFlush = nn.extra.lastFlush || 0;
-      }
-      return n;
-    });
-    edges = data.edges || [];
-    rebuildAdj();
-    toast("已读取");
-  };
+  showModal("回顾", "本局总结（JSON）", JSON.stringify(summary, null, 2),
+    "建议：用两套蓝图对照：低噪音 vs 高覆盖。");
+}
 
-  // add module buttons
-  document.querySelectorAll("[data-add]").forEach(btn=>{
-    btn.addEventListener("click", () => {
-      const type = btn.getAttribute("data-add");
-      const x = 60 + Math.random() * (wrap.clientWidth-220);
-      const y = 80 + Math.random() * (wrap.clientHeight-140);
-      const n = makeNode(type, x, y);
-      nodes.push(n);
-      selectNode(n.id);
-      toast("已添加 "+NodeType[type].name);
-    });
-  });
-
-  // Simulation loop
-  function tick(){
-    const t = now();
-    const dt = t - lastT;
-    lastT = t;
-    if(running){
-      // advance fixed steps to be deterministic-ish
-      const stepMs = 250; // 0.25s
-      pointer._acc = (pointer._acc||0) + dt;
-      while(pointer._acc >= stepMs){
-        pointer._acc -= stepMs;
-        step();
-      }
-    }
-    requestAnimationFrame(tick);
+function hookInputs(){
+  function sync(){
+    S.pipeline.weights.A = parseInt(el("wA").value,10);
+    S.pipeline.weights.B = parseInt(el("wB").value,10);
+    S.pipeline.weights.C = parseInt(el("wC").value,10);
+    S.pipeline.weights.D = parseInt(el("wD").value,10);
+    S.pipeline.dedup = !!el("dedup").checked;
+    S.pipeline.cap = parseInt(el("cap").value,10);
+    S.pipeline.accuracy = parseInt(el("acc").value,10);
+    S.pipeline.buffer = parseInt(el("buf").value,10);
+    S.pipeline.anomaly = !!el("anom").checked;
+    saveState();
+    render();
   }
+  ["wA","wB","wC","wD","cap","acc","buf"].forEach(id => el(id).addEventListener("input", sync));
+  ["dedup","anom"].forEach(id => el(id).addEventListener("change", sync));
 
-  // init
-  seed();
-  updateKPI();
-  renderInspector();
-  setRunning(false);
-  draw();
-  tick();
-})();
+  el("btnScan").addEventListener("click", manualScan);
+  el("btnRun").addEventListener("click", startRunning);
+  el("btnPause").addEventListener("click", pauseRunning);
+  el("btnStep").addEventListener("click", stepOnce);
+  el("btnReset").addEventListener("click", resetGame);
+  el("btnExport").addEventListener("click", exportBlueprint);
+  el("btnImport").addEventListener("click", importBlueprint);
+}
+
+function bootstrap(forceFresh=false){
+  updateUnlocks();
+
+  // inputs to state
+  el("wA").value = S.pipeline.weights.A;
+  el("wB").value = S.pipeline.weights.B;
+  el("wC").value = S.pipeline.weights.C;
+  el("wD").value = S.pipeline.weights.D;
+  el("dedup").checked = S.pipeline.dedup;
+  el("cap").value = S.pipeline.cap;
+  el("acc").value = S.pipeline.accuracy;
+  el("buf").value = S.pipeline.buffer;
+  el("anom").checked = S.pipeline.anomaly;
+
+  render();
+  if(S.turn === 0 && currentInbox.length === 0) beginTurn();
+}
+
+hookInputs();
+
+// modal hooks
+el("btnCloseModal").addEventListener("click", closeModal);
+el("modalBack").addEventListener("click", (e)=>{ if(e.target === el("modalBack")) closeModal(); });
+el("btnCopy").addEventListener("click", copyModalText);
+el("btnPaste").addEventListener("click", pasteAndImport);
+
+// trust drift when not running
+setInterval(()=>{
+  if(S.running) return;
+  if(S.turn >= S.totalTurns) return;
+  if(S.unlocked.upgrades){
+    const idleGain = (S.gap.active && !S.gap.intervened) ? 0.35 : 0.2;
+    S.trust = clamp(S.trust + idleGain, 0, 100);
+    saveState();
+    render();
+  }
+}, 2500);
+
+bootstrap();
 </script>
 </body>
 </html>
