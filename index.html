@@ -1,0 +1,986 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>信息工厂 · 原型（工程模拟）</title>
+  <style>
+    :root{
+      --bg:#0b0f14; --panel:#111826; --panel2:#0f1622; --stroke:#263244; --text:#d7e0ee;
+      --muted:#7f93ad; --good:#45d483; --warn:#ffcc66; --bad:#ff5c5c; --accent:#6aa8ff;
+      --node:#121b28; --node2:#0e1520;
+    }
+    *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+    body{margin:0;background:var(--bg);color:var(--text);font:14px/1.25 system-ui,-apple-system,Segoe UI,Roboto,"PingFang SC","Hiragino Sans GB","Noto Sans CJK SC",sans-serif;}
+    header{
+      position:fixed; left:0; right:0; top:0; z-index:5;
+      background:linear-gradient(to bottom, rgba(11,15,20,.98), rgba(11,15,20,.75));
+      padding:10px 12px 8px;
+      border-bottom:1px solid rgba(38,50,68,.55);
+      backdrop-filter: blur(10px);
+    }
+    header .row{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;}
+    .brand{font-weight:700; letter-spacing:.2px;}
+    .pill{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid rgba(38,50,68,.8); border-radius:999px; background:rgba(17,24,38,.65);}
+    .btn{
+      border:1px solid rgba(38,50,68,.9); background:rgba(17,24,38,.85);
+      color:var(--text); padding:8px 10px; border-radius:10px;
+      display:inline-flex; gap:8px; align-items:center;
+      font-weight:600;
+    }
+    .btn:active{transform:translateY(1px);}
+    .btn.primary{border-color:rgba(106,168,255,.9); background:rgba(106,168,255,.14);}
+    .btn.danger{border-color:rgba(255,92,92,.8); background:rgba(255,92,92,.12);}
+    .btn.small{padding:6px 8px; border-radius:9px; font-weight:600;}
+    .btn[disabled]{opacity:.45;}
+    main{padding-top:82px; display:grid; grid-template-columns: 1fr; gap:10px;}
+    @media (min-width: 900px){
+      main{grid-template-columns: 1.25fr .75fr; padding-top:70px;}
+      header{padding:10px 16px 8px;}
+    }
+    .canvasWrap{
+      position:relative; margin:0 10px 10px; border:1px solid rgba(38,50,68,.75);
+      background:radial-gradient(1200px 700px at 20% 10%, rgba(106,168,255,.12), transparent 55%),
+                 radial-gradient(900px 600px at 90% 60%, rgba(69,212,131,.10), transparent 55%),
+                 linear-gradient(180deg, rgba(17,24,38,.35), rgba(17,24,38,.10));
+      border-radius:14px; overflow:hidden;
+      min-height: 62vh;
+    }
+    canvas{width:100%; height:100%; display:block;}
+    .hud{
+      position:absolute; left:10px; right:10px; top:10px; z-index:3;
+      display:flex; gap:10px; justify-content:space-between; flex-wrap:wrap; pointer-events:none;
+    }
+    .hud .card{
+      pointer-events:auto;
+      background:rgba(15,22,34,.75); border:1px solid rgba(38,50,68,.75);
+      border-radius:12px; padding:10px; min-width: 250px;
+      backdrop-filter: blur(10px);
+    }
+    .kpiGrid{display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:8px; margin-top:8px;}
+    .kpi{padding:8px; border-radius:10px; background:rgba(17,24,38,.7); border:1px solid rgba(38,50,68,.65);}
+    .kpi .v{font-size:15px; font-weight:800;}
+    .kpi .t{font-size:12px; color:var(--muted); margin-top:2px;}
+    .side{
+      margin:0 10px 10px; border:1px solid rgba(38,50,68,.75);
+      background:rgba(17,24,38,.25);
+      border-radius:14px; overflow:hidden;
+    }
+    .side .section{padding:12px 12px 10px; border-bottom:1px solid rgba(38,50,68,.55);}
+    .side h3{margin:0 0 8px; font-size:13px; color:var(--muted); font-weight:700;}
+    .row2{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+    .chip{
+      border:1px solid rgba(38,50,68,.75); background:rgba(17,24,38,.55);
+      color:var(--text); padding:7px 10px; border-radius:999px; font-weight:700;
+    }
+    .chip small{color:var(--muted); font-weight:700;}
+    .help{color:var(--muted); font-size:12px; line-height:1.35;}
+    .list{max-height: 30vh; overflow:auto; padding-right:4px;}
+    .logItem{padding:9px 10px; border:1px solid rgba(38,50,68,.55); border-radius:10px; background:rgba(15,22,34,.35); margin:8px 0;}
+    .logItem b{display:block; margin-bottom:4px;}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+    .tag{display:inline-flex; align-items:center; gap:6px; padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid rgba(38,50,68,.6); color:var(--muted);}
+    .tag.good{border-color:rgba(69,212,131,.55); color:rgba(69,212,131,.95);}
+    .tag.bad{border-color:rgba(255,92,92,.55); color:rgba(255,92,92,.95);}
+    .tag.warn{border-color:rgba(255,204,102,.55); color:rgba(255,204,102,.95);}
+    .footerNote{padding:10px 12px; color:var(--muted); font-size:12px;}
+    .toast{
+      position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+      background:rgba(15,22,34,.95); border:1px solid rgba(38,50,68,.85); border-radius:12px;
+      padding:10px 12px; z-index:20; color:var(--text); max-width:min(540px, 92vw);
+      box-shadow: 0 10px 40px rgba(0,0,0,.45);
+      display:none;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <div class="brand">信息工厂 · 原型 <span class="tag">工程模拟</span></div>
+    <div class="row2">
+      <button class="btn primary" id="btnPlay">▶︎ 运行</button>
+      <button class="btn" id="btnStep">⏭︎ 单步</button>
+      <button class="btn" id="btnReset">↺ 重置</button>
+      <button class="btn" id="btnSave">💾 保存</button>
+      <button class="btn" id="btnLoad">⤓ 读取</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="canvasWrap" id="wrap">
+    <canvas id="c"></canvas>
+
+    <div class="hud">
+      <div class="card">
+        <div class="row2">
+          <span class="pill"><span class="mono">Mode</span>: <b id="modeTxt">编辑</b></span>
+          <span class="pill"><span class="mono">Item</span>: <b id="itemTxt">0</b></span>
+          <span class="pill"><span class="mono">Δt</span>: <b id="dtTxt">0.25s</b></span>
+        </div>
+        <div class="kpiGrid">
+          <div class="kpi"><div class="v" id="kThrough">0/m</div><div class="t">吞吐 (输出)</div></div>
+          <div class="kpi"><div class="v" id="kNoise">0%</div><div class="t">噪音 (丢弃)</div></div>
+          <div class="kpi"><div class="v" id="kDup">0%</div><div class="t">重复浪费</div></div>
+          <div class="kpi"><div class="v" id="kLat">0.0m</div><div class="t">延迟</div></div>
+          <div class="kpi"><div class="v" id="kCov">0%</div><div class="t">覆盖 (高价值)</div></div>
+          <div class="kpi"><div class="v" id="kErr">0%</div><div class="t">抓取错误</div></div>
+        </div>
+        <div class="help" style="margin-top:8px">
+          操作：<b>拖拽节点</b>移动；<b>点节点再点另一个节点</b>连线；<b>点线</b>删除；右侧可添加模块。<br/>
+          目标：搭出 <span class="mono">Source → Filter → Dedup → Digest</span> 管线，让 KPI 变好。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <aside class="side">
+    <div class="section">
+      <h3>添加模块（点一下添加到画布）</h3>
+      <div class="row2">
+        <button class="btn small" data-add="source">⛏️ Source</button>
+        <button class="btn small" data-add="fetch">🚚 Fetch</button>
+        <button class="btn small" data-add="split">🔀 Split</button>
+        <button class="btn small" data-add="filter">🚧 Filter</button>
+        <button class="btn small" data-add="dedup">🧺 Dedup</button>
+        <button class="btn small" data-add="digest">🗞️ Digest</button>
+        <button class="btn small" data-add="output">📦 Output</button>
+      </div>
+      <div class="help" style="margin-top:8px">
+        提示：这只是“工程模拟原型”。每个模块都是一个可调参数的黑盒，流动的是信息 Item（带噪音/重复/价值等属性）。
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>选中节点参数</h3>
+      <div id="inspector" class="help">点一个节点查看参数并调整。</div>
+    </div>
+
+    <div class="section">
+      <h3>生产日志（最近 20 条）</h3>
+      <div class="list" id="log"></div>
+    </div>
+
+    <div class="footerNote">
+      原型说明：这是一个离线单文件网页（无需后端）。后续可以把真实 RSS（Miniflux/RSSHub）接进来，让游戏输入来自真实世界。
+    </div>
+  </aside>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  // ===== Helpers =====
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const lerp=(a,b,t)=>a+(b-a)*t;
+  const now=()=>performance.now();
+  const fmtPct=(x)=> (Math.round(x*1000)/10).toFixed(1) + "%";
+  const fmtMin=(x)=> (Math.round(x*10)/10).toFixed(1) + "m";
+  const randn=()=> { // Box-Muller
+    let u=0,v=0; while(u===0)u=Math.random(); while(v===0)v=Math.random();
+    return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+  };
+
+  function toast(msg){
+    const t=document.getElementById("toast");
+    t.textContent=msg;
+    t.style.display="block";
+    clearTimeout(t._to);
+    t._to=setTimeout(()=>t.style.display="none", 1400);
+  }
+
+  // ===== Canvas Setup (HiDPI) =====
+  const wrap = document.getElementById("wrap");
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
+  function resize(){
+    const r = wrap.getBoundingClientRect();
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    canvas.width = Math.floor(r.width * dpr);
+    canvas.height = Math.floor(r.height * dpr);
+    canvas.style.width = r.width + "px";
+    canvas.style.height = r.height + "px";
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  // ===== Graph Model =====
+  const NodeType = {
+    source: {name:"Source", color:"#6aa8ff"},
+    fetch:  {name:"Fetch",  color:"#7f93ad"},
+    split:  {name:"Split",  color:"#ffcc66"},
+    filter: {name:"Filter", color:"#ffcc66"},
+    dedup:  {name:"Dedup",  color:"#45d483"},
+    digest: {name:"Digest", color:"#6aa8ff"},
+    output: {name:"Output", color:"#45d483"},
+  };
+
+  let nextId = 1;
+  function makeNode(type, x, y){
+    const t = NodeType[type];
+    const id = nextId++;
+    const base = {
+      id, type, x, y, w: 140, h: 64,
+      in: [], out: [],
+      stats: {in:0, out:0, drop:0, err:0},
+      queue: [],
+      selected: false,
+    };
+    // Default params per type
+    if(type==="source"){
+      base.params = { rate: 8, noise: 0.35, dup: 0.25, value: 0.55 }; // per minute-ish
+    }else if(type==="fetch"){
+      base.params = { throughput: 30, err: 0.04, latency: 0.15 };
+    }else if(type==="split"){
+      base.params = { rules: "unity|plugin=>A; manga|one piece=>B; philosophy=>C; bookstore=>D", branches: 2 };
+      base.branch = ["A","B"];
+    }else if(type==="filter"){
+      base.params = { strict: 0.55, keepValueMin: 0.45 }; // strict -> more drop
+    }else if(type==="dedup"){
+      base.params = { threshold: 0.85 }; // similarity threshold
+      base.seen = new Map();
+    }else if(type==="digest"){
+      base.params = { batch: 10, flushMin: 2.0 };
+      base.bucket = [];
+      base.lastFlush = 0;
+    }else if(type==="output"){
+      base.params = { maxPerMin: 20 };
+    }
+    return base;
+  }
+
+  function makeEdge(a, b){
+    return { id: "e"+a.id+"_"+b.id+"_"+Math.random().toString(16).slice(2,6), a:a.id, b:b.id, selected:false };
+  }
+
+  let nodes = [];
+  let edges = [];
+
+  // Seed default pipeline
+  function seed(){
+    nextId = 1;
+    nodes = [
+      makeNode("source", 80, 140),
+      makeNode("fetch",  280, 140),
+      makeNode("filter", 480, 140),
+      makeNode("dedup",  680, 140),
+      makeNode("digest", 880, 140),
+      makeNode("output", 1080,140),
+    ];
+    edges = [
+      makeEdge(nodes[0], nodes[1]),
+      makeEdge(nodes[1], nodes[2]),
+      makeEdge(nodes[2], nodes[3]),
+      makeEdge(nodes[3], nodes[4]),
+      makeEdge(nodes[4], nodes[5]),
+    ];
+    rebuildAdj();
+    logClear();
+    logAdd("系统已初始化：Source → Fetch → Filter → Dedup → Digest → Output");
+  }
+
+  function rebuildAdj(){
+    for(const n of nodes){ n.in=[]; n.out=[]; }
+    for(const e of edges){
+      const a = nodes.find(n=>n.id===e.a);
+      const b = nodes.find(n=>n.id===e.b);
+      if(!a || !b) continue;
+      a.out.push(b.id);
+      b.in.push(a.id);
+    }
+  }
+
+  // ===== Items =====
+  function makeItem(){
+    // topic: 0 unity,1 indie,2 philosophy,3 manga,4 bookstore (we keep it simple)
+    const topics = ["unity","indie","philosophy","manga","bookstore"];
+    const topic = topics[Math.floor(Math.random()*topics.length)];
+    const value = clamp(0.15 + 0.7*Math.random() + 0.15*(topic==="unity" ? 0.2 : 0), 0, 1);
+    const noise = clamp(0.15 + 0.75*Math.random(), 0, 1);
+    const dupKey = (Math.random()<0.35) ? (topic+"_"+Math.floor(Math.random()*5)) : (topic+"_"+Math.floor(Math.random()*100000));
+    return {
+      id: "i"+Math.random().toString(16).slice(2),
+      topic,
+      value,
+      noise,
+      dupKey,
+      createdAt: simTimeMin,
+      hops: 0,
+    };
+  }
+
+  // ===== Simulation =====
+  let running = false;
+  let lastT = now();
+  let simTimeMin = 0;      // simulation time in minutes
+  let dtMin = 0.25/60;     // 0.25s -> minutes
+  const dtTxt = document.getElementById("dtTxt");
+  dtTxt.textContent = "0.25s";
+
+  // Rolling KPI window
+  const windowMin = 5; // 5 minutes
+  let kpiEvents = []; // {t, out, drop, dupIn, dupOut, err, highIn, highOut, lat}
+  function pushKpi(ev){
+    kpiEvents.push(ev);
+    const cutoff = simTimeMin - windowMin;
+    while(kpiEvents.length && kpiEvents[0].t < cutoff) kpiEvents.shift();
+  }
+
+  function topoOrder(){
+    // Kahn
+    const indeg = new Map(nodes.map(n=>[n.id, n.in.length]));
+    const q = nodes.filter(n=>indeg.get(n.id)===0).map(n=>n.id);
+    const out = [];
+    while(q.length){
+      const id = q.shift();
+      out.push(id);
+      const n = nodes.find(x=>x.id===id);
+      for(const to of n.out){
+        indeg.set(to, indeg.get(to)-1);
+        if(indeg.get(to)===0) q.push(to);
+      }
+    }
+    // If cycle exists, fallback to nodes order
+    return out.length===nodes.length ? out : nodes.map(n=>n.id);
+  }
+
+  function step(){
+    const order = topoOrder();
+    // reset per-step stats
+    for(const n of nodes){ n.stats.in=0; n.stats.out=0; n.stats.drop=0; n.stats.err=0; }
+
+    let outCount=0, dropCount=0, errCount=0;
+    let dupIn=0, dupOut=0;
+    let highIn=0, highOut=0;
+    let latSum=0, latN=0;
+
+    // process nodes in topo order
+    for(const nid of order){
+      const n = nodes.find(x=>x.id===nid);
+      if(!n) continue;
+
+      // Source produces items
+      if(n.type==="source"){
+        const rate = n.params.rate; // per minute
+        const expected = rate * dtMin;
+        const k = clamp(expected + 0.8*randn()*Math.sqrt(Math.max(expected,0.0001)), 0, 999);
+        const count = Math.floor(k);
+        for(let i=0;i<count;i++){
+          const it = makeItem();
+          // apply source quality knobs
+          it.noise = clamp(it.noise + (n.params.noise-0.35)*0.8, 0, 1);
+          it.value = clamp(it.value + (n.params.value-0.55)*0.7, 0, 1);
+          if(Math.random() < n.params.dup) it.dupKey = it.topic + "_DUP_" + Math.floor(Math.random()*6);
+          n.queue.push(it);
+        }
+      }
+
+      // Pop some items depending on module throughput
+      let moved = [];
+      const q = n.queue;
+      const maxMove = (() => {
+        if(n.type==="fetch") return Math.floor(n.params.throughput * dtMin);
+        if(n.type==="output") return Math.floor(n.params.maxPerMin * dtMin);
+        return Math.min(q.length, 9999);
+      })();
+
+      // process items
+      for(let j=0;j<Math.min(q.length, maxMove); j++){
+        const it = q.shift();
+        it.hops++;
+        n.stats.in++;
+
+        if(it.value >= 0.75) highIn++;
+
+        if(n.type==="fetch"){
+          // errors & latency
+          if(Math.random() < n.params.err){
+            n.stats.err++; errCount++;
+            dropCount++; n.stats.drop++;
+            continue;
+          }
+          // latency increases "arrival time"
+          it.createdAt -= n.params.latency; // older -> more perceived latency later (simple hack)
+        }
+
+        if(n.type==="filter"){
+          // strict -> higher drop probability, also drop low value/noisy items
+          const strict = n.params.strict;
+          const keepMin = n.params.keepValueMin;
+          const dropProb = clamp(strict*0.35 + it.noise*0.45 + (keepMin - it.value)*0.65, 0, 0.98);
+          if(it.value < keepMin || Math.random() < dropProb){
+            n.stats.drop++; dropCount++;
+            continue;
+          }
+        }
+
+        if(n.type==="dedup"){
+          const key = it.dupKey;
+          dupIn++;
+          const seenAt = n.seen.get(key);
+          if(seenAt !== undefined){
+            // duplicate -> drop
+            n.stats.drop++; dropCount++;
+            continue;
+          }else{
+            n.seen.set(key, simTimeMin);
+            // expire old keys
+            if(n.seen.size > 1200){
+              // cheap prune
+              let k=0;
+              for(const [kk,tt] of n.seen){
+                if(simTimeMin - tt > 15){ n.seen.delete(kk); }
+                if(++k>80) break;
+              }
+            }
+            dupOut++;
+          }
+        }
+
+        if(n.type==="digest"){
+          n.bucket.push(it);
+          const elapsed = simTimeMin - n.lastFlush;
+          const needFlush = (n.bucket.length >= n.params.batch) || (elapsed >= n.params.flushMin && n.bucket.length>0);
+          if(needFlush){
+            // turn bucket into 1 digest item
+            const batch = n.bucket.splice(0, n.bucket.length);
+            n.lastFlush = simTimeMin;
+            const avgValue = batch.reduce((s,x)=>s+x.value,0)/batch.length;
+            const avgNoise = batch.reduce((s,x)=>s+x.noise,0)/batch.length;
+            const digest = {
+              id: "d"+Math.random().toString(16).slice(2),
+              topic: "digest",
+              value: clamp(avgValue+0.08, 0, 1),
+              noise: clamp(avgNoise-0.15, 0, 1),
+              dupKey: "digest_"+Math.floor(simTimeMin),
+              createdAt: batch.reduce((m,x)=>Math.min(m,x.createdAt), simTimeMin),
+              hops: it.hops+1,
+              batchSize: batch.length
+            };
+            moved.push(digest);
+            logAdd(`🗞️ Digest 产出：${batch.length}→1（value=${avgValue.toFixed(2)}）`);
+          }
+          continue; // digest doesn't forward raw items by default
+        }
+
+        // default: forward item
+        moved.push(it);
+      }
+
+      // send moved items to outgoing nodes
+      if(moved.length){
+        for(const toId of n.out){
+          const to = nodes.find(x=>x.id===toId);
+          if(!to) continue;
+          for(const it of moved){
+            // Splitter: naive branching by topic keywords
+            if(n.type==="split"){
+              // For now, just pass all (we'll add UI for branches later)
+              to.queue.push(it);
+              to.stats.in++;
+            }else{
+              to.queue.push(it);
+              to.stats.in++;
+            }
+          }
+        }
+        n.stats.out += moved.length;
+        if(n.type==="output"){
+          // Count output KPI
+          outCount += moved.length;
+          for(const it of moved){
+            const lat = clamp(simTimeMin - it.createdAt, 0, 999);
+            latSum += lat; latN++;
+            if(it.value >= 0.75) highOut++;
+          }
+        }
+      }
+    }
+
+    // advance time
+    simTimeMin += dtMin;
+
+    pushKpi({
+      t: simTimeMin,
+      out: outCount,
+      drop: dropCount,
+      dupIn, dupOut,
+      err: errCount,
+      highIn, highOut,
+      lat: latN ? (latSum/latN) : 0
+    });
+
+    updateKPI();
+    document.getElementById("itemTxt").textContent = nodes.reduce((s,n)=>s+n.queue.length,0).toString();
+  }
+
+  // ===== KPI Display =====
+  function sumWindow(){
+    let out=0, drop=0, err=0, dupIn=0, dupOut=0, highIn=0, highOut=0;
+    let latSum=0, latN=0;
+    for(const e of kpiEvents){
+      out += e.out; drop += e.drop; err += e.err;
+      dupIn += e.dupIn; dupOut += e.dupOut;
+      highIn += e.highIn; highOut += e.highOut;
+      if(e.lat>0){ latSum += e.lat; latN++; }
+    }
+    return {out, drop, err, dupIn, dupOut, highIn, highOut, lat: latN?latSum/latN:0};
+  }
+
+  function updateKPI(){
+    const s = sumWindow();
+    const perMin = s.out / windowMin;
+    const noise = (s.out+s.drop)>0 ? (s.drop/(s.out+s.drop)) : 0;
+    const dupWaste = s.dupIn>0 ? (1 - (s.dupOut/s.dupIn)) : 0;
+    const cov = s.highIn>0 ? (s.highOut/s.highIn) : 0;
+    const err = (s.out+s.drop)>0 ? (s.err/(s.out+s.drop)) : 0;
+
+    document.getElementById("kThrough").textContent = (Math.round(perMin*10)/10).toFixed(1) + "/m";
+    document.getElementById("kNoise").textContent = fmtPct(noise);
+    document.getElementById("kDup").textContent = fmtPct(dupWaste);
+    document.getElementById("kLat").textContent = fmtMin(s.lat);
+    document.getElementById("kCov").textContent = fmtPct(cov);
+    document.getElementById("kErr").textContent = fmtPct(err);
+  }
+
+  // ===== UI: Inspector =====
+  const inspector = document.getElementById("inspector");
+  let selectedNodeId = null;
+  function renderInspector(){
+    const n = nodes.find(x=>x.id===selectedNodeId);
+    if(!n){
+      inspector.innerHTML = `<div class="help">点一个节点查看参数并调整。</div>`;
+      return;
+    }
+    const t = NodeType[n.type];
+    const p = n.params || {};
+    const mkSlider = (key, min, max, step, fmt=(v)=>v.toFixed(2)) => {
+      const v = p[key];
+      const id = "sl_"+key;
+      return `
+        <div style="margin:10px 0 0">
+          <div class="row2" style="justify-content:space-between">
+            <div><b>${key}</b> <span class="tag">${fmt(v)}</span></div>
+          </div>
+          <input id="${id}" type="range" min="${min}" max="${max}" step="${step}" value="${v}" style="width:100%"/>
+        </div>
+      `;
+    };
+
+    let html = `
+      <div class="logItem">
+        <b>${t.name} <span class="tag">${n.type}</span></b>
+        <div class="help mono">id=${n.id} • queue=${n.queue.length}</div>
+      </div>
+    `;
+
+    if(n.type==="source"){
+      html += mkSlider("rate", 0, 60, 1, v=>v.toFixed(0)+" /min");
+      html += mkSlider("noise", 0, 1, 0.01);
+      html += mkSlider("dup", 0, 1, 0.01);
+      html += mkSlider("value", 0, 1, 0.01);
+    }else if(n.type==="fetch"){
+      html += mkSlider("throughput", 1, 120, 1, v=>v.toFixed(0)+" /min");
+      html += mkSlider("err", 0, 0.2, 0.005);
+      html += mkSlider("latency", 0, 2, 0.05, v=>v.toFixed(2)+" m");
+    }else if(n.type==="filter"){
+      html += mkSlider("strict", 0, 1, 0.01);
+      html += mkSlider("keepValueMin", 0, 1, 0.01);
+    }else if(n.type==="dedup"){
+      html += mkSlider("threshold", 0.5, 0.99, 0.01);
+      html += `<div class="help" style="margin-top:8px">提示：这里用 dupKey 模拟重复。后续可换成标题 hash / 相似度。</div>`;
+    }else if(n.type==="digest"){
+      html += mkSlider("batch", 1, 50, 1, v=>v.toFixed(0));
+      html += mkSlider("flushMin", 0.2, 10, 0.1, v=>v.toFixed(1)+" m");
+    }else if(n.type==="output"){
+      html += mkSlider("maxPerMin", 1, 120, 1, v=>v.toFixed(0)+" /min");
+    }else if(n.type==="split"){
+      html += `<div class="help">Split 模块在下一版会做成多输出口分流（目前等同直通）。</div>`;
+    }
+
+    html += `<div class="row2" style="margin-top:10px">
+      <button class="btn small danger" id="btnDelNode">删除节点</button>
+    </div>`;
+
+    inspector.innerHTML = html;
+
+    // wire sliders
+    for(const k of Object.keys(p)){
+      const el = document.getElementById("sl_"+k);
+      if(!el) continue;
+      el.addEventListener("input", () => {
+        p[k] = parseFloat(el.value);
+        renderInspector();
+      }, {passive:true});
+    }
+
+    const del = document.getElementById("btnDelNode");
+    if(del){
+      del.onclick = () => {
+        deleteNode(n.id);
+        selectedNodeId = null;
+        renderInspector();
+        toast("已删除节点");
+      };
+    }
+  }
+
+  function deleteNode(id){
+    nodes = nodes.filter(n=>n.id!==id);
+    edges = edges.filter(e=>e.a!==id && e.b!==id);
+    rebuildAdj();
+  }
+
+  // ===== Log =====
+  const logEl = document.getElementById("log");
+  let logs = [];
+  function logAdd(msg){
+    const t = Math.floor(simTimeMin*60); // seconds
+    logs.unshift({t, msg});
+    logs = logs.slice(0, 20);
+    renderLog();
+  }
+  function logClear(){ logs=[]; renderLog(); }
+  function renderLog(){
+    logEl.innerHTML = logs.map(x=>{
+      const m = Math.floor(x.t/60), s = x.t%60;
+      return `<div class="logItem"><b>${x.msg}</b><div class="help mono">${m}m ${s}s</div></div>`;
+    }).join("") || `<div class="help">暂无。</div>`;
+  }
+
+  // ===== Interaction: drag nodes, connect nodes, delete edge =====
+  let pointer = {down:false, id:null, ox:0, oy:0, mode:"none", x:0, y:0};
+  let connectFrom = null; // node id
+  function hitNode(px, py){
+    // topmost last
+    for(let i=nodes.length-1;i>=0;i--){
+      const n=nodes[i];
+      if(px>=n.x && px<=n.x+n.w && py>=n.y && py<=n.y+n.h) return n;
+    }
+    return null;
+  }
+  function distToSegment(px,py,x1,y1,x2,y2){
+    const A=px-x1, B=py-y1, C=x2-x1, D=y2-y1;
+    const dot=A*C+B*D;
+    const len=C*C+D*D;
+    let t = len? dot/len : 0;
+    t = clamp(t,0,1);
+    const x=x1+t*C, y=y1+t*D;
+    const dx=px-x, dy=py-y;
+    return Math.sqrt(dx*dx+dy*dy);
+  }
+  function hitEdge(px, py){
+    for(let i=edges.length-1;i>=0;i--){
+      const e=edges[i];
+      const a=nodes.find(n=>n.id===e.a);
+      const b=nodes.find(n=>n.id===e.b);
+      if(!a||!b) continue;
+      const x1=a.x+a.w, y1=a.y+a.h/2;
+      const x2=b.x, y2=b.y+b.h/2;
+      const d=distToSegment(px,py,x1,y1,x2,y2);
+      if(d<10) return e;
+    }
+    return null;
+  }
+
+  function selectNode(id){
+    selectedNodeId = id;
+    renderInspector();
+  }
+
+  function bringToFront(n){
+    nodes = nodes.filter(x=>x.id!==n.id);
+    nodes.push(n);
+  }
+
+  function canvasPos(ev){
+    const r = canvas.getBoundingClientRect();
+    const x = (ev.clientX - r.left);
+    const y = (ev.clientY - r.top);
+    return {x, y};
+  }
+
+  canvas.addEventListener("pointerdown", (ev) => {
+    ev.preventDefault();
+    canvas.setPointerCapture(ev.pointerId);
+    const {x,y} = canvasPos(ev);
+    pointer.down=true; pointer.x=x; pointer.y=y;
+    const n = hitNode(x,y);
+    const e = hitEdge(x,y);
+
+    if(e && !n){
+      // delete edge
+      edges = edges.filter(xx=>xx.id!==e.id);
+      rebuildAdj();
+      toast("已删除连线");
+      return;
+    }
+
+    if(n){
+      bringToFront(n);
+      selectNode(n.id);
+      pointer.id=n.id;
+      pointer.ox = x - n.x;
+      pointer.oy = y - n.y;
+
+      // connect mode if tap twice: if connectFrom exists and different node
+      if(connectFrom && connectFrom !== n.id){
+        // prevent cycles by basic check (optional)
+        edges.push(makeEdge(nodes.find(a=>a.id===connectFrom), n));
+        rebuildAdj();
+        toast("已连线");
+        connectFrom = null;
+      }else{
+        connectFrom = n.id;
+        toast("选择起点：再点一个节点以连线");
+        pointer.mode="drag";
+      }
+    }else{
+      selectedNodeId=null;
+      renderInspector();
+      connectFrom=null;
+    }
+  }, {passive:false});
+
+  canvas.addEventListener("pointermove", (ev) => {
+    if(!pointer.down) return;
+    const {x,y} = canvasPos(ev);
+    pointer.x=x; pointer.y=y;
+    const n = nodes.find(nn=>nn.id===pointer.id);
+    if(n && pointer.mode==="drag"){
+      n.x = x - pointer.ox;
+      n.y = y - pointer.oy;
+      // keep inside bounds
+      n.x = clamp(n.x, 10, wrap.clientWidth - n.w - 10);
+      n.y = clamp(n.y, 10, wrap.clientHeight - n.h - 10);
+    }
+  }, {passive:true});
+
+  canvas.addEventListener("pointerup", (ev) => {
+    pointer.down=false; pointer.id=null; pointer.mode="none";
+  }, {passive:true});
+
+  // ===== Draw =====
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // grid
+    const w=wrap.clientWidth, h=wrap.clientHeight;
+    ctx.save();
+    ctx.globalAlpha = 0.25;
+    ctx.strokeStyle = "rgba(38,50,68,.55)";
+    ctx.lineWidth = 1;
+    const step=40;
+    for(let x=0;x<w;x+=step){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
+    for(let y=0;y<h;y+=step){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+    ctx.restore();
+
+    // edges
+    for(const e of edges){
+      const a = nodes.find(n=>n.id===e.a);
+      const b = nodes.find(n=>n.id===e.b);
+      if(!a||!b) continue;
+      const x1=a.x+a.w, y1=a.y+a.h/2;
+      const x2=b.x, y2=b.y+b.h/2;
+
+      ctx.save();
+      ctx.strokeStyle = "rgba(106,168,255,.55)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      const mx = (x1+x2)/2;
+      ctx.moveTo(x1,y1);
+      ctx.bezierCurveTo(mx,y1, mx,y2, x2,y2);
+      ctx.stroke();
+      ctx.restore();
+
+      // arrow
+      const ang = Math.atan2(y2-y1, x2-x1);
+      const ax = x2-10*Math.cos(ang), ay=y2-10*Math.sin(ang);
+      ctx.save();
+      ctx.fillStyle="rgba(106,168,255,.75)";
+      ctx.beginPath();
+      ctx.moveTo(x2,y2);
+      ctx.lineTo(ax + 6*Math.cos(ang+Math.PI*0.6), ay + 6*Math.sin(ang+Math.PI*0.6));
+      ctx.lineTo(ax + 6*Math.cos(ang-Math.PI*0.6), ay + 6*Math.sin(ang-Math.PI*0.6));
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // flowing items (dots)
+    // Represent each node queue with small dots on right side
+    for(const n of nodes){
+      const qn = Math.min(18, n.queue.length);
+      for(let i=0;i<qn;i++){
+        const it = n.queue[i];
+        const tx = n.x + n.w - 12 - (i%6)*6;
+        const ty = n.y + 14 + Math.floor(i/6)*8;
+        ctx.beginPath();
+        ctx.fillStyle = it.value>0.75 ? "rgba(69,212,131,.95)" : "rgba(215,224,238,.75)";
+        ctx.arc(tx, ty, 2.2, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+
+    // nodes
+    for(const n of nodes){
+      const t = NodeType[n.type];
+      const isSel = (n.id===selectedNodeId);
+      ctx.save();
+      // shadow
+      ctx.shadowColor="rgba(0,0,0,.35)";
+      ctx.shadowBlur=14;
+      ctx.shadowOffsetY=6;
+
+      // body
+      const r=14;
+      roundRect(ctx, n.x, n.y, n.w, n.h, r);
+      ctx.fillStyle = isSel ? "rgba(18,27,40,.92)" : "rgba(18,27,40,.72)";
+      ctx.fill();
+      ctx.shadowBlur=0;
+
+      // border
+      ctx.lineWidth = isSel ? 2.5 : 1.5;
+      ctx.strokeStyle = isSel ? "rgba(106,168,255,.95)" : "rgba(38,50,68,.85)";
+      ctx.stroke();
+
+      // header stripe
+      roundRect(ctx, n.x, n.y, n.w, 22, r);
+      ctx.fillStyle = "rgba(15,22,34,.9)";
+      ctx.fill();
+      ctx.fillStyle = t.color;
+      ctx.globalAlpha = 0.9;
+      roundRect(ctx, n.x, n.y, 4, n.h, r);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // text
+      ctx.fillStyle = "rgba(215,224,238,.95)";
+      ctx.font = "700 13px system-ui,-apple-system,Segoe UI,Roboto,PingFang SC";
+      ctx.fillText(t.name, n.x+10, n.y+15);
+      ctx.fillStyle = "rgba(127,147,173,.95)";
+      ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
+      ctx.fillText("q:"+n.queue.length, n.x+10, n.y+44);
+
+      ctx.restore();
+    }
+
+    // connect hint line
+    if(connectFrom){
+      const a = nodes.find(n=>n.id===connectFrom);
+      if(a){
+        ctx.save();
+        ctx.strokeStyle="rgba(255,204,102,.55)";
+        ctx.lineWidth=2;
+        ctx.setLineDash([6,6]);
+        ctx.beginPath();
+        ctx.moveTo(a.x+a.w, a.y+a.h/2);
+        ctx.lineTo(pointer.x, pointer.y);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  function roundRect(ctx, x, y, w, h, r){
+    const rr = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr, y);
+    ctx.arcTo(x+w, y, x+w, y+h, rr);
+    ctx.arcTo(x+w, y+h, x, y+h, rr);
+    ctx.arcTo(x, y+h, x, y, rr);
+    ctx.arcTo(x, y, x+w, y, rr);
+    ctx.closePath();
+  }
+
+  // ===== Controls =====
+  const btnPlay = document.getElementById("btnPlay");
+  const btnStep = document.getElementById("btnStep");
+  const btnReset = document.getElementById("btnReset");
+  const btnSave = document.getElementById("btnSave");
+  const btnLoad = document.getElementById("btnLoad");
+  const modeTxt = document.getElementById("modeTxt");
+
+  function setRunning(v){
+    running = v;
+    btnPlay.textContent = running ? "⏸︎ 暂停" : "▶︎ 运行";
+    modeTxt.textContent = running ? "运行" : "编辑";
+  }
+
+  btnPlay.onclick = () => { setRunning(!running); };
+  btnStep.onclick = () => { if(!running) step(); };
+  btnReset.onclick = () => { seed(); simTimeMin=0; kpiEvents=[]; updateKPI(); setRunning(false); };
+  btnSave.onclick = () => {
+    const data = { nextId, nodes: nodes.map(n=>({
+      id:n.id,type:n.type,x:n.x,y:n.y,w:n.w,h:n.h,params:n.params,
+      extra: { lastFlush:n.lastFlush||0, seen: n.seen ? Array.from(n.seen.entries()).slice(0,200) : null }
+    })), edges };
+    localStorage.setItem("infoFactoryProto_v1", JSON.stringify(data));
+    toast("已保存到本地");
+  };
+  btnLoad.onclick = () => {
+    const raw = localStorage.getItem("infoFactoryProto_v1");
+    if(!raw){ toast("没有保存数据"); return; }
+    const data = JSON.parse(raw);
+    nextId = data.nextId || 1;
+    nodes = data.nodes.map(nn=>{
+      const n = makeNode(nn.type, nn.x, nn.y);
+      n.id = nn.id; n.w=nn.w; n.h=nn.h; n.params = nn.params;
+      if(n.type==="dedup" && nn.extra && nn.extra.seen){
+        n.seen = new Map(nn.extra.seen);
+      }
+      if(n.type==="digest" && nn.extra){
+        n.lastFlush = nn.extra.lastFlush || 0;
+      }
+      return n;
+    });
+    edges = data.edges || [];
+    rebuildAdj();
+    toast("已读取");
+  };
+
+  // add module buttons
+  document.querySelectorAll("[data-add]").forEach(btn=>{
+    btn.addEventListener("click", () => {
+      const type = btn.getAttribute("data-add");
+      const x = 60 + Math.random() * (wrap.clientWidth-220);
+      const y = 80 + Math.random() * (wrap.clientHeight-140);
+      const n = makeNode(type, x, y);
+      nodes.push(n);
+      selectNode(n.id);
+      toast("已添加 "+NodeType[type].name);
+    });
+  });
+
+  // Simulation loop
+  function tick(){
+    const t = now();
+    const dt = t - lastT;
+    lastT = t;
+    if(running){
+      // advance fixed steps to be deterministic-ish
+      const stepMs = 250; // 0.25s
+      pointer._acc = (pointer._acc||0) + dt;
+      while(pointer._acc >= stepMs){
+        pointer._acc -= stepMs;
+        step();
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // init
+  seed();
+  updateKPI();
+  renderInspector();
+  setRunning(false);
+  draw();
+  tick();
+})();
+</script>
+</body>
+</html>
